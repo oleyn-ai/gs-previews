@@ -210,6 +210,13 @@ display:flex;align-items:center;justify-content:center;flex:0 0 auto}
 .kadv{margin-left:auto;width:26px;height:26px;border-radius:8px;border:1px solid var(--ln);background:none;
 color:var(--t3);cursor:pointer;display:flex;align-items:center;justify-content:center}
 .kadv svg{width:13px;height:13px}
+.ckb{width:15px;height:15px;accent-color:var(--mr);cursor:pointer;flex:0 0 auto}
+.bulk{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--mr50);border:1px solid var(--ln);
+border-radius:11px;padding:9px 13px;margin-bottom:10px;font-size:12.5px;font-weight:650;color:var(--mr)}
+:root[data-theme=dark] .bulk{color:#EBA3AF}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]) .bulk{color:#EBA3AF}}
+.bulk select{height:32px;border:1px solid var(--ln);border-radius:8px;background:var(--cd);
+font:inherit;font-size:12.5px;color:var(--tx);padding:0 8px}
 .addbar{display:flex;align-items:center;gap:9px;background:var(--cd);border:1px solid var(--ln);border-radius:12px;
 padding:12px 15px;margin-bottom:13px;font-size:13.5px;font-weight:650;color:var(--t2)}
 .addbar svg{width:16px;height:16px;color:var(--mr)}
@@ -326,7 +333,7 @@ var VEND=[
  ['Siti Flower','suspended',9,1,[['Owner login','approved']]]];
 var UNAS=[['Daun Kadok 100g',''],['Pisang Tanduk 1kg','']];
 var VOPTS=['Fresh','Vegetables','Fruit Store','Ajiboss','HCT (Ah Boy)'];
-var S={view:'ops',wpage:'board',slot:'11',flt:'all',dark:false,oview:'board',x:{},ng:{},col:{0:1,1:1,2:1},
+var S={view:'ops',wpage:'board',slot:'11',flt:'all',dark:false,oview:'board',osel:{},oact:'',x:{},ng:{},col:{0:1,1:1,2:1},
  th:{x1:true},tin:{},rx:{1:true},snote:{},pfd:{},pin:{},pedit:{},vx:{},vasel:{}};
 
 function sv(d,extra){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"'+(extra||'')+'>'+d+'</svg>'}
@@ -610,16 +617,26 @@ function wOrders(){
    '<div style="margin-top:6px;font-size:12px;color:var(--t3)">Intake = order in, stalls packing · Collected = runner has it · Packaged = tote complete, gate passed · Delivered = at the door or picked up · Cancelled = stopped, stall lines pulled or flagged.</div>';
  }else if(S.oview==='list'){
   var rows=OP.slice().sort(function(a,b){return a.st-b.st||(b.id>a.id?1:-1)});
-  body='<div class="tbl"><div class="thd"><span style="min-width:56px">Order</span><span style="flex:1">Customer</span>'+
+  var selN=Object.keys(S.osel).length,allSel=selN===rows.length&&selN>0;
+  var bulk=selN?'<div class="bulk">'+selN+' selected'+
+   '<select data-oactsel><option value="">Bulk action…</option>'+
+   KSTAGES.map(function(s,i){return '<option value="'+i+'"'+(S.oact===String(i)?' selected':'')+'>Move to '+s[0]+'</option>'}).join('')+
+   '</select>'+
+   '<button class="wb pri btnp" data-oapply="1" '+(S.oact===''?'disabled':'')+'>Apply</button>'+
+   '<button class="wb gh btnp" data-oclear="1">Clear</button>'+
+   '<span style="margin-left:auto;font-size:10.5px;font-weight:600;color:var(--t3)">bulk moves are audited like drags — the completeness gate still applies</span></div>':'';
+  body=bulk+'<div class="tbl"><div class="thd"><span style="width:15px;display:flex"><input type="checkbox" class="ckb" data-oselall="1" '+(allSel?'checked':'')+' aria-label="Select all"></span>'+
+   '<span style="min-width:56px">Order</span><span style="flex:1">Customer</span>'+
    '<span style="min-width:90px">Slot</span><span style="min-width:60px;text-align:right">Stalls</span>'+
    '<span style="min-width:110px">Stage</span><span style="min-width:96px;text-align:right">Time</span></div>'+
-   rows.map(function(o){return '<div class="rw"><span style="min-width:56px;font-weight:650">#'+o.id+'</span>'+
+   rows.map(function(o){return '<div class="rw"><input type="checkbox" class="ckb" data-osel="'+o.id+'" '+(S.osel[o.id]?'checked':'')+' aria-label="Select #'+o.id+'">'+
+   '<span style="min-width:56px;font-weight:650">#'+o.id+'</span>'+
    '<span style="flex:1;font-size:13px">'+esc(o.cu)+'</span>'+
    '<span style="min-width:90px;font-size:12.5px;color:var(--t3)">'+esc(o.slot)+'</span>'+
    '<span style="min-width:60px;text-align:right;font-weight:650">'+o.stalls+'</span>'+
    '<div style="min-width:110px">'+kStBadge(o.st)+'</div>'+
    '<span style="min-width:96px;text-align:right;font-size:12px;color:var(--t3)">'+esc(o.age)+'</span></div>'}).join('')+
-   '</div><div style="margin-top:8px;font-size:12px;color:var(--t3)">Every order today, flat — same data as the board, different view.</div>';
+   '</div><div style="margin-top:8px;font-size:12px;color:var(--t3)">Every order today, flat — tick rows for WooCommerce-style bulk actions.</div>';
  }else{
   var groups=[['Today — Fri 1 Aug',OP.filter(function(o){return o.st>=3}).map(function(o){
     return [o.id,o.cu,o.slot,o.stalls,o.age,o.st===4?'cancelled':'']})].concat(ARCH.map(function(g){return [g[0],g[1]]}));
@@ -785,6 +802,13 @@ document.addEventListener('change',function(e){
   fr.readAsDataURL(e.target.files[0]);
  }
  else if(ds.vasel!==undefined){S.vasel[ds.vasel]=e.target.value}
+ else if(ds.oselall!==undefined){
+  if(e.target.checked){OP.forEach(function(o){S.osel[o.id]=1})}else{S.osel={}}
+  render()}
+ else if(ds.osel!==undefined){
+  if(e.target.checked){S.osel[ds.osel]=1}else{delete S.osel[ds.osel]}
+  render()}
+ else if(ds.oactsel!==undefined){S.oact=e.target.value;render()}
 });
 document.addEventListener('click',function(e){
  var t=e.target.closest('button,a[data-wp]');if(!t)return;var d=t.dataset;
@@ -799,6 +823,12 @@ document.addEventListener('click',function(e){
  else if(d.oadv!==undefined){var oo=null;OP.forEach(function(x){if(x.id===d.oadv)oo=x});
   if(oo&&oo.st<3){oo.st++;if(oo.st===3){oo.age='just now';delete oo.fail}}}
  else if(d.ov){S.oview=d.ov}
+ else if(d.oapply){if(S.oact!==''){var ns=+S.oact;
+  OP.forEach(function(o){if(S.osel[o.id]){o.st=ns;
+   if(ns===3){o.age='just now';delete o.fail}
+   if(ns===4){o.age='just now';o.why=o.why||'cancelled by office';delete o.fail}}});
+  S.osel={};S.oact=''}}
+ else if(d.oclear){S.osel={};S.oact=''}
  else if(d.th){S.th[d.th]=!S.th[d.th]}
  else if(d.tsend){var v=(S.tin[d.tsend]||'').trim();
   if(v){(THREADS[d.tsend]=THREADS[d.tsend]||[]).push({by:'of',who:'You · Office',t:'10:06',txt:v});
