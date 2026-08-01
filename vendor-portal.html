@@ -723,11 +723,6 @@ function mobile(){
    (!S.staffv?'<div class="dey">'+T('products')+'</div>'+
     di('products','tag',T('products'),Object.keys(S.preq).length?Object.keys(S.preq).length+' '+T('reqsShort'):'')+
     di('staff','profile',T('staff'),STAFF.length):'')+
-   '<div class="dey">'+T('demo')+'</div>'+
-   '<div class="dit" style="cursor:default">'+SVG.profile+T('staffView')+'<button class="sw" data-stv="1" aria-checked="'+S.staffv+'" aria-label="Staff view"><i></i></button></div>'+
-   '<div class="dit" style="cursor:default">'+SVG.offline+T('offline')+'<button class="sw" data-sw2="1" aria-checked="'+S.off+'" aria-label="Offline"><i></i></button></div>'+
-   di('ack','handoff',T('collection'))+
-   di('empty','empty',T('emptySlot'))+
    '</div></div>';
  }
  if(S.qr){
