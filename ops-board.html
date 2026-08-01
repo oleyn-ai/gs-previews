@@ -186,8 +186,10 @@ font:inherit;font-size:12px;font-weight:650;cursor:pointer}
 .plock{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--t4);font-weight:600;margin-top:2px}
 .plock svg{width:11px;height:11px;flex:0 0 auto}
 /* order pipeline — CRM-style kanban */
-.kb{display:flex;gap:12px;overflow-x:auto;padding-bottom:12px;align-items:flex-start}
-.kcol{flex:0 0 238px;background:rgba(60,40,20,.035);border:1.5px dashed transparent;border-radius:14px;padding:10px 10px 4px;min-height:120px}
+/* columns stretch to the tallest lane so the whole lane is a drop target,
+   not just the strip behind existing cards */
+.kb{display:flex;gap:12px;overflow-x:auto;padding-bottom:12px;align-items:stretch;min-height:460px}
+.kcol{flex:0 0 238px;background:rgba(60,40,20,.035);border:1.5px dashed transparent;border-radius:14px;padding:10px 10px 40px}
 :root[data-theme=dark] .kcol{background:rgba(255,255,255,.04)}
 @media(prefers-color-scheme:dark){:root:not([data-theme=light]) .kcol{background:rgba(255,255,255,.04)}}
 .kcol.hov{border-color:var(--gd);background:rgba(201,150,46,.07)}
