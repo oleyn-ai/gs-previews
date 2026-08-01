@@ -405,11 +405,10 @@ function card(c){
  var cl=c.st==='ready'?'c ok':c.st==='short'?'c sh':'c',qv=c.st==='short'?c.sq:c.q;
  var h='<div class="'+cl+'"><div class="top">'+thumb(c,'th')+'<div class="nb">'+
   '<div class="n1">'+esc(c.en)+'</div>'+(c.ms?'<div class="n2">'+esc(c.ms)+'</div>':'')+
-  '<div class="meta">'+(c.v?'<span class="chip">'+esc(c.v)+'</span>':'')+
-  (c.a?'<span class="chip at">'+esc(c.a)+'</span>':'')+
-  '<button class="oref" data-exp="'+c.id+'"><u>'+c.o.length+' order'+(c.o.length>1?'s':'')+'</u>'+(S.exp[c.id]?'▴':'▾')+'</button></div></div>'+
+  '<div class="meta">'+c.o.map(function(o){return '<span class="ord">#'+o+'</span>'}).join('')+
+  (c.v?'<span class="chip">'+esc(c.v)+'</span>':'')+
+  (c.a?'<span class="chip at">'+esc(c.a)+'</span>':'')+'</div></div>'+
   '<div class="qb"><div class="qn">'+qv+'</div>'+(c.v?'<div class="qu">× '+esc(c.v)+'</div>':'')+'</div></div>';
- if(S.exp[c.id])h+='<div class="ords">'+c.o.map(function(o){return '<span class="ord">#'+o+'</span>'}).join('')+'</div>';
  var f=FLOW[c.st];
  if(f){
   h+=(c.st!=='pending'?'<div class="stat" style="margin-top:8px">'+stBadge(c.st)+'</div>':'')+
@@ -561,7 +560,8 @@ function mobile(){
  if(S.sheet!==null){var it=S.items[S.sheet];
   h+='<div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="ey">'+SVG.alert+'How many can you give?</div>'+
    '<div style="font-size:15px;font-weight:650;color:var(--t2)">'+esc(it.en)+(it.ms?' <span style="color:var(--t3);font-weight:450">'+esc(it.ms)+'</span>':'')+'</div>'+
-   '<div style="font-size:12px;color:var(--t3);margin-top:3px">'+it.q+(it.v?' × '+esc(it.v):'')+' ordered · '+it.o.length+' order'+(it.o.length>1?'s':'')+'</div>'+
+   '<div style="font-size:12px;color:var(--t3);margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+it.q+(it.v?' × '+esc(it.v):'')+' ordered'+
+   it.o.map(function(o){return ' <span class="ord">#'+o+'</span>'}).join('')+'</div>'+
    '<div class="step"><button class="cir" data-d="-1"'+(S.sq<=0?' disabled':'')+'>−</button>'+
    '<div class="sv"><b>'+S.sq+'</b><span>of '+it.q+(it.v?' × '+esc(it.v):'')+'</span></div>'+
    '<button class="cir" data-d="1"'+(S.sq>=it.q?' disabled':'')+'>+</button></div>'+
@@ -786,7 +786,6 @@ document.addEventListener('click',function(e){
  else if(d.wv){S.wv=d.wv}
  else if(d.sw){S.accept=!S.accept}
  else if(d.pr){window.print();return}
- else if(d.exp){S.exp[d.exp]=!S.exp[d.exp]}
  else if(d.adv!==undefined){var c=S.items[d.adv];var f=FLOW[c.st];
   if(f){c.st=f.next;if(c.st==='ready')S.lastOk=+d.adv}}
  else if(d.sh!==undefined){S.sheet=+d.sh;S.sq=Math.max(0,S.items[+d.sh].q-1)}
