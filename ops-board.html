@@ -196,7 +196,7 @@ border:1px solid var(--ln);color:var(--t3);white-space:nowrap}
 </style>
 
 <div class="bar">
- <div class="gp"><button class="tb" data-v="ops" aria-pressed="true">Fhami · Ops</button><button class="tb" data-v="runner">Runner</button><button class="tb" data-v="hub">Hub</button></div>
+ <div class="gp"><button class="tb" data-v="ops" aria-pressed="true">Fhami · Owner</button><button class="tb" data-v="opsm">Ops manager</button><button class="tb" data-v="acct">Accounts</button><button class="tb" data-v="runner">Runner</button></div>
  <div class="gp"><button class="tb" id="thBtn">Dark</button></div>
 </div>
 <div class="stage" id="stage"></div>
@@ -234,13 +234,8 @@ var XC=[
  {id:'x6',sev:'warn',icon:'van',t:'Delivery failed',d:'#8533 — customer unreachable at door, driver waiting 8 min.',age:'1 min',acts:[['Call customer','call'],['Retry','rty']]}];
 var CIRCUIT=[["Hj Abu Bakar (Abg Butcher)",22],["Mutton King",13],["Haji Samad",21],["Fresh",33],
 ["Vegetables",6],["Fruit Store",14],["Ajiboss",124],["HCT (Ah Boy)",98]];
-var TOTES=[
- {o:'8535',st:[['Ajiboss',1],['Fresh',1],['Fruit Store',1],['Eggs Store',1],['Rabiya',1]]},
- {o:'8541',st:[['Ajiboss',1],['Store 188',1],['Mutton King',1],['Haji Samad',1],['Fresh',0]]},
- {o:'8539',st:[['Alif Ba Ta',1],['HCT (Ah Boy)',0],['Sundry Grocers',1],['Umairah',0]]},
- {o:'8543',st:[['Hj Abu Bakar (Abg Butcher)',1],['Vegetables',0]]},
- {o:'8550',st:[['Ajiboss',1],['Fresh',0],['Siti Flower',0],['Pak Abu & Sons',1],['Mutiara 99',1]]},
- {o:'8547',st:[['Store 188',1],['Rabiya',1],['Eggs Store',1]],rel:true}];
+/* The hub completeness gate has no separate view (Owner, 2026-08-01): it surfaces as the
+   tote-incomplete exception and the "waiting release" state on Deliveries. */
 
 /* threads: private notes on the exception itself. by: st=stall of=office rn=runner */
 var THREADS={
@@ -275,7 +270,7 @@ var VEND=[
  ['Siti Flower','suspended',9,1,[['Owner login','approved']]]];
 var UNAS=[['Daun Kadok 100g',''],['Pisang Tanduk 1kg','']];
 var VOPTS=['Fresh','Vegetables','Fruit Store','Ajiboss','HCT (Ah Boy)'];
-var S={view:'ops',wpage:'board',slot:'11',flt:'all',dark:false,x:{},ng:{},col:{0:1,1:1,2:1},rel:{5:1},
+var S={view:'ops',wpage:'board',slot:'11',flt:'all',dark:false,x:{},ng:{},col:{0:1,1:1,2:1},
  th:{x1:true},tin:{},rx:{1:true},snote:{},pfd:{},pin:{},pedit:{},vx:{},vasel:{}};
 
 function sv(d,extra){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"'+(extra||'')+'>'+d+'</svg>'}
@@ -312,19 +307,27 @@ function stBadge(st,ready,lines){
  :st==='silent'?'<span class="bdot r"><i></i>Silent</span>'
  :'<span class="bdot n"><i></i>Not started</span>'}
 
+/* per-section access per internal role — what a role cannot manage simply is not there */
+var ALLOW={ops:null,
+ opsm:['board','slots','stalls','deliv','vendors'],
+ acct:['settle','vprices','orders']};
+var ROLETAG={ops:'Owner · full access',opsm:'Ops manager',acct:'Accounts · settling party'};
+function can(id){var a=ALLOW[S.view];return !a||a.indexOf(id)>-1}
 function sidebar(){
  var open=XC.filter(function(x){return !S.x[x.id]}).length;
- function a(id,ic,lb,ct){return '<a data-wp="'+id+'"'+(S.wpage===id?' aria-current="page"':'')+'>'+SVG[ic]+lb+(ct?'<span class="ct">'+ct+'</span>':'')+'</a>'}
- return '<div class="sb"><div class="lgw"><span class="wm">Geylang Serai</span><span class="adm">Admin</span></div>'+
-  '<div class="gl">'+SVG.board+'Operate</div>'+
-  a('board','board','Command board',open||'')+a('slots','wave','Slots')+a('stalls','stall','Stalls')+a('deliv','van','Deliveries')+
-  '<div class="gl">'+SVG.stall+'Vendors</div>'+
-  a('vendors','users','Manage stalls',UNAS.filter(function(u){return !u[1]}).length||'')+
-  a('vprices','tag','Stall prices')+a('settle','rcpt','Settlement',RCPTS.filter(function(r){return r.status==='pending'}).length||'')+
-  '<div class="gl">'+SVG.orders+'Store</div>'+
-  a('orders','orders','Orders')+a('catalog','box','Catalogue')+a('coupons','coupon','Coupons')+
-  a('business','biz','Business')+a('users','users','Users')+a('emails','mail','Emails')+
-  '<div class="gl">'+SVG.gear+'Manage</div>'+a('settings','gear','Settings')+'</div>'}
+ function a(id,ic,lb,ct){if(!can(id))return '';
+  return '<a data-wp="'+id+'"'+(S.wpage===id?' aria-current="page"':'')+'>'+SVG[ic]+lb+(ct?'<span class="ct">'+ct+'</span>':'')+'</a>'}
+ function grp(ic,lb,items){var body=items.join('');if(!body)return '';
+  return '<div class="gl">'+ic+lb+'</div>'+body}
+ return '<div class="sb"><div class="lgw"><span class="wm">Geylang Serai</span><span class="adm">'+ROLETAG[S.view]+'</span></div>'+
+  grp(SVG.board,'Operate',[a('board','board','Command board',open||''),a('slots','wave','Slots'),a('stalls','stall','Stalls'),a('deliv','van','Deliveries')])+
+  grp(SVG.stall,'Vendors',[a('vendors','users','Manage stalls',UNAS.filter(function(u){return !u[1]}).length||''),
+   a('vprices','tag','Stall prices'),a('settle','rcpt','Settlement',RCPTS.filter(function(r){return r.status==='pending'}).length||'')])+
+  grp(SVG.orders,'Store',[a('orders','orders','Orders'),a('catalog','box','Catalogue'),a('coupons','coupon','Coupons'),
+   a('business','biz','Business'),a('users','users','Users'),a('emails','mail','Emails')])+
+  grp(SVG.gear,'Manage',[a('settings','gear','Settings')])+
+  (ALLOW[S.view]?'<div class="plock" style="padding:12px 10px 4px;color:rgba(255,255,255,.45)">'+SVG.lock+'Sections are granted per role — enforced server-side.</div>':'')+
+  '</div>'}
 
 function slotCard(s,full){
  var stgs=STAGES.map(function(nm,i){
@@ -618,26 +621,6 @@ function runner(){
   '<div class="fa"><p>No cash at collection — the office settles weekly. Works offline; syncs when signal returns.</p></div>'+
   '<div class="hbar"></div></div>'}
 
-function hub(){
- var recd=24;
- return '<div class="web np">'+sidebar().replace('data-wp="board"','data-wp="board" ')+
-  '<div class="mn"><div class="hrow"><div><div class="h1">Hub — 11:00 slot totes</div>'+
-  '<div class="h2">Bulk in from '+recd+' of '+STALLS.length+' stalls · an order leaves only when every stall is in</div></div>'+
-  '<span class="bdot m live"><i></i>packing totes</span></div>'+
-  '<div class="tbl"><div class="thd"><span style="min-width:56px">Order</span><span style="flex:1">Stalls in</span>'+
-  '<span style="min-width:96px">Gate</span><span style="min-width:110px"></span></div>'+
-  TOTES.map(function(t,i){
-   var got=t.st.filter(function(s){return s[1]}).length,all=t.st.length,full=got===all,rel=S.rel[i];
-   return '<div class="rw"><span style="min-width:56px;font-weight:650">#'+t.o+'</span>'+
-   '<div style="flex:1;display:flex;gap:4px;flex-wrap:wrap">'+
-   t.st.map(function(s){return '<span class="mini2'+(s[1]?' in':'')+'">'+esc(s[0])+'</span>'}).join('')+'</div>'+
-   '<div style="min-width:96px;font-weight:700;font-size:13px;color:'+(full?'var(--ok)':'var(--wn)')+'">'+got+' / '+all+'</div>'+
-   '<div style="min-width:110px">'+(rel?'<span class="bdot"><i></i>Released</span>'
-    :'<button class="wb '+(full?'grn':'gh')+' btnp" data-rel="'+i+'" '+(full?'':'disabled')+'>'+(full?'Release':'Waiting')+'</button>')+
-   '</div></div>'}).join('')+'</div>'+
-  '<div style="margin-top:12px;font-size:12px;color:var(--t3)">The gate is the rule, not a reminder: a five-stall order physically cannot be released at 4 of 5.</div>'+
-  '</div></div>'}
-
 function fitPhone(){
  var p=document.querySelector('.ph');if(!p)return;
  if(window.innerWidth<530){p.style.zoom='';return}
@@ -648,7 +631,8 @@ function fitPhone(){
 function render(){
  var el=document.getElementById('stage');
  el.className='stage'+(S.view==='runner'?' phst':'');
- el.innerHTML=S.view==='ops'?ops():S.view==='runner'?runner():hub();
+ if(S.view!=='runner'&&!can(S.wpage))S.wpage=ALLOW[S.view][0];
+ el.innerHTML=S.view==='runner'?runner():ops();
  document.querySelectorAll('[data-v]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.v===S.view)});
  thBtn.setAttribute('aria-pressed',S.dark);
  fitPhone();
@@ -681,7 +665,6 @@ document.addEventListener('click',function(e){
  else if(d.ng){S.ng[d.ng]=1}
  else if(d.ng2){S.ng[d.ng2]=1}
  else if(d.col!==undefined){S.col[d.col]=1}
- else if(d.rel!==undefined){S.rel[d.rel]=1}
  else if(d.th){S.th[d.th]=!S.th[d.th]}
  else if(d.tsend){var v=(S.tin[d.tsend]||'').trim();
   if(v){(THREADS[d.tsend]=THREADS[d.tsend]||[]).push({by:'of',who:'You · Office',t:'10:06',txt:v});
