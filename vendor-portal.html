@@ -285,7 +285,7 @@ box-shadow:var(--sh)}
 
 <div class="bar">
  <div class="gp"><button class="tb" data-v="mobile" aria-pressed="true">iPhone 16</button><button class="tb" data-v="web">Web</button><button class="tb" data-v="admin">Admin</button></div>
- <div class="gp" id="mchips"><button class="tb" data-s="today" aria-pressed="true">Today</button><button class="tb" data-s="ack">Collection</button><button class="tb" data-s="upcoming">Upcoming</button><button class="tb" data-s="prices">Prices</button><button class="tb" data-s="empty">Empty</button></div>
+ <div class="gp" id="mchips"><button class="tb" data-s="today" aria-pressed="true">Today</button><button class="tb" data-s="ack">Collection</button><button class="tb" data-s="upcoming">Upcoming</button><button class="tb" data-s="prices">Prices</button><button class="tb" data-s="settle">Settle</button><button class="tb" data-s="empty">Empty</button></div>
  <div class="gp"><button class="tb" id="offBtn">Offline</button><button class="tb" id="thBtn">Dark</button></div>
 </div>
 <div class="stage" id="stage"></div>
@@ -323,9 +323,19 @@ function mk(){return RAW.map(function(r,i){return{id:i,en:r[0],ms:r[1],v:r[2],a:
 var S={view:"mobile",screen:"today",nav:"today",wpage:"today",wv:"11",off:false,dark:false,
   sheet:null,exp:{},items:mk(),acked:null,sq:0,q:"",accept:true,lastOk:null,
   /* prices: id -> {c:cents, by:'stall'|'office'}. Two seeded to show the locked state. */
-  prices:{0:{c:650,by:'stall'},2:{c:280,by:'office'}},pin:{},pedit:{},vth:{},vtin:{}};
+  prices:{0:{c:650,by:'stall'},2:{c:280,by:'office'}},pin:{},pedit:{},vth:{},vtin:{},rx:{1:true}};
 /* per-line note threads (short lines). by: me=stall of=office */
 var VTHR={};
+/* daily prices: yesterday's, for reference under today's empty inputs */
+var YPRICE=[640,540,280,270,80,210,210];
+/* settlement receipts — auto-generated per day from collected qty x that day's price.
+   Payment happens outside the app; the office attaches proof + note (VP-05). */
+var RCPTS=[
+ {d:'Fri 1 Aug',building:true},
+ {d:'Thu 31 Jul',lines:[[0,2,640],[1,3,540],[2,1,280],[4,2,80],[5,1,210]],status:'paid',
+  paidAt:'Thu 20:15',pnote:'PayNow · ref ending 8842'},
+ {d:'Wed 30 Jul',lines:[[0,1,630],[3,2,260],[6,1,205]],status:'pending'}];
+function rTotal(r){var t=0;(r.lines||[]).forEach(function(l){t+=l[1]*l[2]});return t}
 
 /* line lifecycle: pending -> confirmed -> packing -> ready (short possible until ready) */
 var FLOW={pending:{next:'confirmed',label:'Confirm'},
@@ -409,17 +419,38 @@ function priceCardM(c){
  var p=S.prices[c.id];
  return '<div class="c"><div class="top">'+thumb(c,'th')+'<div class="nb">'+
   '<div class="n1">'+esc(c.en)+'</div>'+(c.ms?'<div class="n2">'+esc(c.ms)+'</div>':'')+
-  (p?'<div class="meta"><span class="lockrow">'+SVG.lock+'Saved — only the office can change it</span></div>'
-    :'<div class="meta"><span class="lockrow">Your price to the market</span></div>')+'</div>'+
+  (p?'<div class="meta"><span class="lockrow">'+SVG.lock+'Saved for today — only the office can change it</span></div>'
+    :'<div class="meta"><span class="chip">Yesterday '+fmt(YPRICE[c.id])+'</span><span class="lockrow">today not set</span></div>')+'</div>'+
   (p?'<div class="qb"><div class="pv">'+fmt(p.c)+'</div></div>':'')+'</div>'+
-  (p?'':'<div class="acts" style="margin-top:9px">'+priceInput(c.id)+
+  (p?'':'<div class="acts" style="margin-top:9px">'+priceInput(c.id,(YPRICE[c.id]/100).toFixed(2))+
    '<button class="btn b-mr" style="flex:0 0 auto;padding:0 18px;height:38px" data-psave="'+c.id+'">Save</button></div>')+
   '</div>'}
+
+function rcptCardM(r,i){
+ if(r.building)return '<div class="c" style="box-shadow:none"><div class="top"><div class="nb">'+
+  '<div class="n1">'+r.d+' — today</div><div class="n2">Receipt builds itself from what the runner collects × today’s price</div>'+
+  '<div class="meta"><span class="bdot m"><i></i>collecting</span></div></div></div></div>';
+ var tot=rTotal(r),paid=r.status==='paid';
+ var h='<div class="c"><div class="top"><div class="nb"><div class="n1">'+r.d+'</div>'+
+  '<div class="meta">'+(paid?'<span class="bdot"><i></i>Paid · '+r.paidAt+'</span>':'<span class="bdot w"><i></i>Pending payment</span>')+
+  '<button class="oref" data-rx="'+i+'"><u>'+r.lines.length+' items</u>'+(S.rx[i]?'▴':'▾')+'</button></div></div>'+
+  '<div class="qb"><div class="pv">'+fmt(tot)+'</div></div></div>';
+ if(S.rx[i]){
+  h+='<div class="ords" style="display:block">'+r.lines.map(function(l){
+   return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:3px 0">'+
+   '<span style="color:var(--t2)">'+esc(S.items[l[0]].en)+' × '+l[1]+'</span>'+
+   '<span style="color:var(--t3)">'+fmt(l[2])+' → <b style="color:var(--tx)">'+fmt(l[1]*l[2])+'</b></span></div>'}).join('')+
+  '<div style="font-size:10.5px;color:var(--t4);margin-top:6px">Auto receipt — from collected quantities and that day’s price</div>'+
+  (paid?'<div style="display:flex;align-items:center;gap:7px;margin-top:8px"><span class="bdot"><i></i>Payment proof attached</span>'+
+   '<span style="font-size:12px;color:var(--t2)">'+esc(r.pnote||'')+'</span></div>':'')+
+  '</div>';
+ }
+ return h+'</div>'}
 
 function mobile(){
  var done=S.items.filter(isDone).length,ready=S.items.filter(function(i){return i.st==='ready'}).length,tot=S.items.length;
  var ttl={today:(S.wv==='11'?'11:00 slot':'14:00 slot'),ack:'Collection',upcoming:'Next 3 days',
-   empty:'No slot open',history:'History',profile:'Profile',prices:'My prices'}[S.screen];
+   empty:'No slot open',history:'History',profile:'Profile',prices:'Today’s prices',settle:'Settlement'}[S.screen];
  var h='<div class="ph"><div class="sbar"><span>9:41</span><div class="isl"></div>'+
   '<span class="rt"><span style="font-size:11px">▮▮▮</span><span class="bat"><i></i></span></span></div>';
  if(S.off)h+='<div class="off">'+SVG.offline+'Offline — saved on this phone<span class="q">'+done+' waiting to send</span></div>';
@@ -457,14 +488,18 @@ function mobile(){
    '<div style="flex:0 0 auto;align-self:center">'+fillBadge(r[4])+'</div></div></div>'}).join('')+
    '</div></div>';
  } else if(S.screen==='prices'){
-  h+='<div class="prov">'+SVG.lock+'Enter once — after saving, only the office can change a price</div>'+
+  h+='<div class="prov">'+SVG.lock+'Today’s prices — enter each morning; once saved only the office can change</div>'+
    '<div class="scroll"><div class="list">'+S.items.map(priceCardM).join('')+
-   '<div class="mt" style="padding:14px 20px"><p>This is your price to the market.<br>Customer prices never appear here.</p></div></div></div>';
+   '<div class="mt" style="padding:14px 20px"><p>Today’s price is used for today’s receipt.<br>Customer prices never appear here.</p></div></div></div>';
+ } else if(S.screen==='settle'){
+  h+='<div class="scroll"><div class="list">'+RCPTS.map(rcptCardM).join('')+
+   '<div class="mt" style="padding:14px 20px"><p>Payment is made outside the app (PayNow / bank).<br>The receipt, proof and note are recorded here.</p></div></div></div>';
  } else if(S.screen==='profile'){
   h+='<div class="scroll"><div class="pcard"><div class="pid"><img src="'+LOGO+'" alt=""><div><b>'+STORE+'</b>'+
    '<span>Pasar Geylang Serai · dry goods</span></div></div>'+
    '<div class="prow" style="cursor:default">'+SVG.check+'Accepting orders<button class="sw" data-sw="1" aria-checked="'+S.accept+'" aria-label="Accepting orders"><i></i></button></div>'+
-   '<button class="prow" data-s2="prices">'+SVG.tag+'My prices<span class="rv">'+Object.keys(S.prices).length+' of '+S.items.length+' set '+SVG.chev+'</span></button>'+
+   '<button class="prow" data-s2="prices">'+SVG.tag+'Today’s prices<span class="rv">'+Object.keys(S.prices).length+' of '+S.items.length+' set '+SVG.chev+'</span></button>'+
+   '<button class="prow" data-s2="settle">'+SVG.history+'Settlement<span class="rv">'+RCPTS.filter(function(r){return r.status==='pending'}).length+' pending '+SVG.chev+'</span></button>'+
    '<button class="prow">'+SVG.upcoming+'Prep time<span class="rv">45 min '+SVG.chev+'</span></button>'+
    '<button class="prow">'+SVG.today+'Opening days<span class="rv">Tue – Sun '+SVG.chev+'</span></button>'+
    '<button class="prow">'+SVG.globe+'Language<span class="rv">English · Melayu '+SVG.chev+'</span></button>'+
@@ -495,7 +530,34 @@ function wSidebar(){
  function a(id,ic,lb){return '<a data-wp="'+id+'"'+(S.wpage===id?' aria-current="page"':'')+'>'+SVG[ic]+lb+'</a>'}
  return '<div class="sb"><div class="lgw"><img src="'+LOGO+'" alt=""><b>Pasar Geylang<br>Serai</b></div>'+
   '<div class="gl">'+SVG.wave+'Slot</div>'+a('today','today','Today')+a('upcoming','upcoming','Upcoming')+a('print','print','Print pick list')+
-  '<div class="gl">'+SVG.stall+'Stall</div>'+a('prices','tag','Prices')+a('history','history','History')+a('profile','profile','Profile')+'</div>'}
+  '<div class="gl">'+SVG.stall+'Stall</div>'+a('prices','tag','Prices')+a('settle','handoff','Settlement')+a('history','history','History')+a('profile','profile','Profile')+'</div>'}
+
+function wSettle(){
+ return '<div class="mn"><div class="hrow"><div><div class="h1">Settlement</div>'+
+  '<div class="h2">'+STORE+' · auto receipt per day — collected quantity × that day’s price · payment recorded, never processed</div></div></div>'+
+  RCPTS.map(function(r,i){
+   if(r.building)return '<div class="tbl" style="margin-bottom:10px"><div class="rw"><div style="flex:1">'+
+    '<div style="font-size:14px;font-weight:600">'+r.d+' — today</div>'+
+    '<div style="font-size:11.5px;color:var(--t3);margin-top:2px">Receipt auto-generates when collection is recorded</div></div>'+
+    '<span class="bdot m"><i></i>collecting</span></div></div>';
+   var tot=rTotal(r),paid=r.status==='paid';
+   var h='<div class="tbl" style="margin-bottom:10px"><div class="rw"><div style="flex:1">'+
+    '<div style="font-size:14px;font-weight:600">'+r.d+'</div>'+
+    '<div style="font-size:11.5px;color:var(--t3);margin-top:2px">'+r.lines.length+' items · auto receipt</div></div>'+
+    '<div class="pv" style="min-width:90px;text-align:right">'+fmt(tot)+'</div>'+
+    '<div style="min-width:150px;display:flex;justify-content:flex-end">'+(paid?'<span class="bdot"><i></i>Paid · '+r.paidAt+'</span>':'<span class="bdot w"><i></i>Pending payment</span>')+'</div>'+
+    '<button class="wb" style="background:transparent;border:1px solid var(--ln);color:var(--t2)" data-rx="'+i+'">'+(S.rx[i]?'Hide':'Details')+'</button></div>';
+   if(S.rx[i]){
+    h+=r.lines.map(function(l){return '<div class="rw" style="padding:7px 13px"><span style="flex:1;font-size:12.5px;color:var(--t2)">'+esc(S.items[l[0]].en)+'</span>'+
+     '<span style="min-width:40px;text-align:right;font-weight:650">'+l[1]+'</span>'+
+     '<span style="min-width:70px;text-align:right;font-size:12px;color:var(--t3)">'+fmt(l[2])+'</span>'+
+     '<span style="min-width:80px;text-align:right;font-weight:700">'+fmt(l[1]*l[2])+'</span></div>'}).join('')+
+    '<div class="rw" style="background:var(--pg)"><span style="flex:1;font-size:11px;color:var(--t4)">'+
+    (paid?'Payment proof attached · '+esc(r.pnote||''):'The office attaches the payment screenshot and note when paid — you will see it here')+
+    '</span></div>';
+   }
+   return h+'</div>'}).join('')+
+  '<div style="font-size:12px;color:var(--t3)">Yesterday’s price never bleeds into today — each day’s receipt uses that day’s saved price only.</div></div>'}
 
 function wToday(){
  var done=S.items.filter(isDone).length,ready=S.items.filter(function(i){return i.st==='ready'}).length;
@@ -559,8 +621,8 @@ function wPrint(){
   '<div style="margin-top:14px;font-size:11px;color:#555">Short of anything? Tell the market office before 10:15.</div></div></div>'}
 
 function wPrices(){
- return '<div class="mn"><div class="hrow"><div><div class="h1">Prices</div>'+
-  '<div class="h2">'+STORE+' · your price to the market — customer prices never appear here</div></div>'+
+ return '<div class="mn"><div class="hrow"><div><div class="h1">Today’s prices</div>'+
+  '<div class="h2">'+STORE+' · Fri 1 Aug · enter each day’s price once — today’s receipt uses today’s price · customer prices never appear here</div></div>'+
   '<span class="bdot n">'+'<i></i>'+Object.keys(S.prices).length+' of '+S.items.length+' set</span></div>'+
   '<div class="tbl"><div class="thd"><span style="width:38px"></span><span style="flex:1">Product</span>'+
   '<span style="min-width:130px">Your price</span><span style="min-width:190px">Status</span></div>'+
@@ -601,7 +663,7 @@ function wProfile(){
   '<div style="margin-top:12px;font-size:12px;color:var(--t3)">Only the stall’s own price to the market is shown on vendor surfaces. Customer prices and margins never are.</div></div>'}
 
 function web(){
- var page={today:wToday,upcoming:wUpcoming,print:wPrint,prices:wPrices,history:wHistory,profile:wProfile}[S.wpage]();
+ var page={today:wToday,upcoming:wUpcoming,print:wPrint,prices:wPrices,settle:wSettle,history:wHistory,profile:wProfile}[S.wpage]();
  return '<div class="web'+(S.wpage==='today'?'':' np')+'">'+wSidebar()+page+'</div>'}
 
 /* ---------- office (admin) view ---------- */
@@ -668,7 +730,8 @@ document.addEventListener('click',function(e){
  if(e.target.classList.contains('scrim')){S.sheet=null;return render()}
  var t=e.target.closest('button,a[data-wp]');if(!t)return;var d=t.dataset;
  if(d.v){S.view=d.v}
- else if(d.s){S.screen=d.s;S.nav=(d.s==='ack'||d.s==='empty')?'today':d.s==='prices'?'profile':d.s;S.sheet=null}
+ else if(d.s){S.screen=d.s;S.nav=(d.s==='ack'||d.s==='empty')?'today':(d.s==='prices'||d.s==='settle')?'profile':d.s;S.sheet=null}
+ else if(d.rx!==undefined){S.rx[d.rx]=!S.rx[d.rx]}
  else if(d.s2){S.screen=d.s2;S.nav='profile'}
  else if(t.id==='offBtn'){S.off=!S.off}
  else if(t.id==='thBtn'){S.dark=!S.dark;document.documentElement.setAttribute('data-theme',S.dark?'dark':'light')}
