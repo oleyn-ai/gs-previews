@@ -405,8 +405,17 @@ var S={view:"mobile",screen:"today",nav:"today",wpage:"today",wv:"11",off:false,
   sheet:null,exp:{},items:mk(),acked:null,sq:0,q:"",accept:true,lastOk:null,ost:{},oexp:{'8530':true},
   /* prices: id -> {c:cents, by:'stall'|'office'}. Two seeded to show the locked state. */
   prices:{0:{c:650,by:'stall'},2:{c:280,by:'office'}},pin:{},pedit:{},vth:{},vtin:{},rx:{1:true},
-  ifl:'all',inv:null,preq:{},prqo:{},lang:'en',qr:false,shared:false,staffv:false};
-var STAFF=[['Owner login','approved'],['Rahim — helper','approved']];
+  ifl:'all',inv:null,preq:{},prqo:{},lang:'en',qr:false,shared:false,staffv:false,
+  stSheet:null,stf:{n:'',p:'',e:''},stErr:'',termArm:null,rsent:{}};
+function stBadgeS(st){
+ return st==='active'?'<span class="bdot"><i></i>'+T('activeW')+'</span>'
+  :st==='invited'?'<span class="bdot w"><i></i>'+T('waitOff')+'</span>'
+  :'<span class="bdot r"><i></i>'+T('terminatedW')+'</span>'}
+/* staff: owner-managed logins. st: active | invited (password emailed, office approval
+   pending, fail-closed) | terminated (sessions revoked immediately) */
+var STAFF=[
+ {n:'Ajiboss',role:'owner',st:'active',phone:'+65 9772 0000',email:'ajiboss.gs@gmail.com'},
+ {n:'Rahim',role:'helper',st:'active',phone:'+65 9123 4567',email:'rahim.gs@gmail.com'}];
 /* light i18n — English / Melayu, switched in Settings */
 var TT={
 en:{today:'Today',upcoming:'Upcoming',invoices:'Invoices',settings:'Settings',
@@ -423,7 +432,14 @@ en:{today:'Today',upcoming:'Upcoming',invoices:'Invoices',settings:'Settings',
  ready:'Ready for Pickup',notAvail:'Not Available',avail:'Available',navail:'Not avail',
  demo:'Demo states',offline:'Offline',emptySlot:'Empty slot',collection:'Collection',
  staffNote:'Sees Today & Upcoming only',addStaff:'Add staff login',waitOff:'Waiting office approval',
- approvedw:'Approved',staffView:'Staff view',download:'Download',share:'Share',close:'Close',copied:'Link copied ✓'},
+ approvedw:'Approved',staffView:'Staff view',download:'Download',share:'Share',close:'Close',copied:'Link copied ✓',
+ activeW:'Active',phoneL:'Phone',emailL:'Email',emailHint:'The password will be sent to this email',
+ sendInvite:'Send invite',invitedNote:'Invite sent — password emailed · office approval pending',
+ resetPw:'Reset password',resetSent:'Reset link sent to',resend:'Resend invite',
+ terminate:'Terminate access',tapConfirm:'Tap again to confirm — signs them out everywhere',
+ terminatedW:'Terminated',restore:'Restore access',restoreNote:'Restoring needs office approval again',
+ fillAll:'Fill in name, phone and email',badEmail:'Check the email address',
+ badPhone:'Check the phone number (SG mobile)',dupEmail:'This email already has a login'},
 ms:{today:'Hari Ini',upcoming:'Akan Datang',invoices:'Invois',settings:'Tetapan',
  products:'Urus Produk',staff:'Urus Pekerja',
  provProd:'Harga dalaman — mohon perubahan, pejabat luluskan',
@@ -438,7 +454,14 @@ ms:{today:'Hari Ini',upcoming:'Akan Datang',invoices:'Invois',settings:'Tetapan'
  ready:'Sedia untuk Diambil',notAvail:'Tidak Tersedia',avail:'Ada',navail:'Tiada',
  demo:'Mod demo',offline:'Luar talian',emptySlot:'Slot kosong',collection:'Kutipan',
  staffNote:'Nampak Hari Ini & Akan Datang sahaja',addStaff:'Tambah log masuk pekerja',waitOff:'Menunggu kelulusan pejabat',
- approvedw:'Diluluskan',staffView:'Pandangan pekerja',download:'Muat turun',share:'Kongsi',close:'Tutup',copied:'Pautan disalin ✓'}};
+ approvedw:'Diluluskan',staffView:'Pandangan pekerja',download:'Muat turun',share:'Kongsi',close:'Tutup',copied:'Pautan disalin ✓',
+ activeW:'Aktif',phoneL:'Telefon',emailL:'Emel',emailHint:'Kata laluan akan dihantar ke emel ini',
+ sendInvite:'Hantar jemputan',invitedNote:'Jemputan dihantar — kata laluan diemel · tunggu kelulusan pejabat',
+ resetPw:'Set semula kata laluan',resetSent:'Pautan set semula dihantar ke',resend:'Hantar semula jemputan',
+ terminate:'Tamatkan akses',tapConfirm:'Tekan sekali lagi untuk sahkan — log keluar semua peranti',
+ terminatedW:'Ditamatkan',restore:'Pulihkan akses',restoreNote:'Pemulihan perlu kelulusan pejabat semula',
+ fillAll:'Isi nama, telefon dan emel',badEmail:'Semak alamat emel',
+ badPhone:'Semak nombor telefon (SG)',dupEmail:'Emel ini sudah ada log masuk'}};
 function T(k){return TT[S.lang][k]||TT.en[k]||k}
 var STOREURL='https://www.geylangserai.shop/store/ajiboss/';
 /* per-line note threads (short lines). by: me=stall of=office */
@@ -695,11 +718,13 @@ function mobile(){
   h+='<div class="prov">'+SVG.lock+T('staffNote')+'</div>'+
    '<div class="scroll"><div class="pcard" style="margin-top:12px">'+
    STAFF.map(function(st,i){
-    return '<div class="prow" style="cursor:default">'+SVG.profile+
-    '<span>'+esc(st[0])+'<span style="display:block;font-size:11px;color:var(--t4);font-weight:550">'+
-    (i===0?'Owner — full access':T('staffNote'))+'</span></span>'+
-    '<span class="rv">'+(st[1]==='approved'?'<span class="bdot"><i></i>'+T('approvedw')+'</span>'
-     :'<span class="bdot w"><i></i>'+T('waitOff')+'</span>')+'</span></div>'}).join('')+
+    var sub=st.role==='owner'?'Owner — full access':esc(st.phone)+' · '+T('staffNote');
+    var row='<span style="min-width:0;flex:1">'+esc(st.n)+
+     '<span style="display:block;font-size:11px;color:var(--t4);font-weight:550">'+sub+'</span></span>'+
+     '<span class="rv">'+stBadgeS(st.st)+(st.role==='owner'?'':' '+SVG.chev)+'</span>';
+    return st.role==='owner'
+     ?'<div class="prow" style="cursor:default;opacity:'+(st.st==='terminated'?'.55':'1')+'">'+SVG.profile+row+'</div>'
+     :'<button class="prow" data-stf="'+i+'" style="opacity:'+(st.st==='terminated'?'.55':'1')+'">'+SVG.profile+row+'</button>'}).join('')+
    '<button class="prow" data-stadd="1" style="color:var(--mr)"><span style="color:var(--mr);display:flex">'+SVG.profile+'</span>'+T('addStaff')+'</button></div>'+
    '<div class="mt" style="padding:16px 26px"><p>'+T('confid')+'</p></div></div>';
  } else {
@@ -724,6 +749,40 @@ function mobile(){
     di('products','tag',T('products'),Object.keys(S.preq).length?Object.keys(S.preq).length+' '+T('reqsShort'):'')+
     di('staff','profile',T('staff'),STAFF.length):'')+
    '</div></div>';
+ }
+ if(S.stSheet!==null){
+  var add=S.stSheet==='add';
+  var sm=add?null:STAFF[S.stSheet];
+  function fld(k,lb,ph,hint,type){
+   return '<div style="margin-top:10px"><div class="ey" style="margin-bottom:4px">'+lb+'</div>'+
+   '<div class="pin" style="max-width:none;height:42px"><input id="stf'+k+'" data-stfield="'+k+'" type="'+(type||'text')+'" placeholder="'+ph+'" value="'+esc(S.stf[k])+'" style="font-weight:550"></div>'+
+   (hint?'<div style="font-size:10.5px;color:var(--t4);margin-top:3px">'+hint+'</div>':'')+'</div>'}
+  h+='<div class="scrim"></div><div class="sheet"><div class="grab"></div>';
+  if(add){
+   h+='<div class="ey">'+SVG.profile+T('addStaff')+'</div>'+
+    fld('n',T('today')==='Today'?'Name':'Nama','Rahim')+
+    fld('p',T('phoneL'),'+65 9XXX XXXX','', 'tel')+
+    fld('e',T('emailL'),'rahim@gmail.com',T('emailHint'),'email')+
+    (S.stErr?'<div style="margin-top:9px;font-size:12px;font-weight:650;color:var(--rd)">'+S.stErr+'</div>':'')+
+    '<button class="fb" style="margin-top:13px" data-stsend="1">'+T('sendInvite')+'</button>'+
+    '<div class="plock" style="margin-top:9px">'+SVG.lock+T('staffNote')+' · '+T('waitOff').toLowerCase()+'</div>';
+  }else{
+   h+='<div class="ey">'+SVG.profile+esc(sm.n)+'</div>'+
+    '<div style="font-size:12.5px;color:var(--t3);line-height:19px">'+esc(sm.phone)+'<br>'+esc(sm.email)+'</div>'+
+    '<div style="margin:10px 0 4px">'+stBadgeS(sm.st)+'</div>'+
+    (sm.st==='invited'?'<div style="font-size:11.5px;color:var(--t3)">'+T('invitedNote')+'</div>':'')+
+    (S.rsent[S.stSheet]?'<div style="margin-top:9px;font-size:12px;font-weight:650;color:var(--ok)">'+T('resetSent')+' '+esc(sm.email)+'</div>':'')+
+    '<div style="display:flex;flex-direction:column;gap:8px;margin-top:13px">'+
+    (sm.st==='invited'?'<button class="gbtn" data-strs="'+S.stSheet+'">'+SVG.handoff+T('resend')+'</button>':'')+
+    (sm.st==='active'?'<button class="gbtn" data-strs="'+S.stSheet+'">'+SVG.lock+T('resetPw')+'</button>':'')+
+    (sm.st!=='terminated'
+     ?'<button class="gbtn" style="border-color:var(--rdl);color:var(--rd)" data-sterm="'+S.stSheet+'">'+
+      (S.termArm===S.stSheet?T('tapConfirm'):T('terminate'))+'</button>'
+     :'<button class="gbtn" data-strestore="'+S.stSheet+'">'+T('restore')+'</button>'+
+      '<div style="font-size:10.5px;color:var(--t4)">'+T('restoreNote')+'</div>')+
+    '</div>';
+  }
+  h+='</div>';
  }
  if(S.qr){
   h+='<div class="invov"><div class="invp" style="display:flex;flex-direction:column;align-items:center;text-align:center">'+
@@ -922,12 +981,28 @@ function wProfile(){
   '<div class="pcard" style="margin:14px 0 0"><div class="pid"><div><b>'+T('staff')+'</b>'+
   '<span>'+T('staffNote')+'</span></div></div>'+
   STAFF.map(function(st,i){
-   return '<div class="prow" style="cursor:default">'+SVG.profile+
-   '<span>'+esc(st[0])+'<span style="display:block;font-size:11px;color:var(--t4);font-weight:550">'+
-   (i===0?'Owner — full access':T('staffNote'))+'</span></span>'+
-   '<span class="rv">'+(st[1]==='approved'?'<span class="bdot"><i></i>'+T('approvedw')+'</span>'
-    :'<span class="bdot w"><i></i>'+T('waitOff')+'</span>')+'</span></div>'}).join('')+
-  '<button class="prow" data-stadd="1" style="color:var(--mr)"><span style="color:var(--mr);display:flex">'+SVG.profile+'</span>'+T('addStaff')+'</button></div></div>'+
+   return '<div class="prow" style="cursor:default;opacity:'+(st.st==='terminated'?'.55':'1')+'">'+SVG.profile+
+   '<span style="min-width:0;flex:1">'+esc(st.n)+
+   '<span style="display:block;font-size:11px;color:var(--t4);font-weight:550">'+
+   (st.role==='owner'?'Owner — full access':esc(st.phone)+' · '+esc(st.email))+'</span>'+
+   (S.rsent[i]?'<span style="display:block;font-size:10.5px;color:var(--ok);font-weight:650">'+T('resetSent')+' '+esc(st.email)+'</span>':'')+'</span>'+
+   '<span class="rv">'+stBadgeS(st.st)+
+   (st.role==='owner'?'':
+    (st.st!=='terminated'
+     ?' <button class="wb" style="background:transparent;border:1px solid var(--ln);color:var(--t2)" data-strs="'+i+'">'+(st.st==='invited'?T('resend'):T('resetPw'))+'</button>'+
+      ' <button class="wb" style="background:transparent;border:1px solid var(--rdl);color:var(--rd)" data-sterm="'+i+'">'+(S.termArm===i?T('tapConfirm'):T('terminate'))+'</button>'
+     :' <button class="wb" style="background:transparent;border:1px solid var(--ln);color:var(--t2)" data-strestore="'+i+'">'+T('restore')+'</button>'))+
+   '</span></div>'}).join('')+
+  '<div style="padding:12px 14px;border-top:1px solid var(--ln)">'+
+  '<div style="font-size:11px;font-weight:700;color:var(--t4);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">'+T('addStaff')+'</div>'+
+  '<div style="display:flex;gap:7px;flex-wrap:wrap">'+
+  '<div class="pin" style="max-width:120px"><input data-stfield="n" id="wstfn" placeholder="Name" value="'+esc(S.stf.n)+'" style="font-weight:550"></div>'+
+  '<div class="pin" style="max-width:140px"><input data-stfield="p" id="wstfp" placeholder="+65 9XXX XXXX" value="'+esc(S.stf.p)+'" style="font-weight:550"></div>'+
+  '<div class="pin" style="max-width:180px"><input data-stfield="e" id="wstfe" placeholder="email@gmail.com" value="'+esc(S.stf.e)+'" style="font-weight:550"></div>'+
+  '<button class="wb" style="background:var(--mr);color:#fff;height:38px" data-stsend="1">'+T('sendInvite')+'</button></div>'+
+  (S.stErr?'<div style="margin-top:7px;font-size:12px;font-weight:650;color:var(--rd)">'+S.stErr+'</div>':'')+
+  '<div style="font-size:10.5px;color:var(--t4);margin-top:6px">'+T('emailHint')+' · '+T('waitOff').toLowerCase()+'</div>'+
+  '</div></div></div>'+
   '<div class="pcard" style="margin:0;width:280px;text-align:center;padding-bottom:16px">'+
   '<div class="pid" style="justify-content:center"><div><b>'+T('showQR')+'</b><span>'+STORE+'</span></div></div>'+
   '<img src="'+QR+'" alt="Store QR" style="width:200px;height:200px;image-rendering:pixelated;margin:12px auto 8px;display:block">'+
@@ -997,11 +1072,15 @@ document.addEventListener('input',function(e){
   S.pin[e.target.dataset.pid]=e.target.value.replace(/[^0-9.]/g,'');render();refocus(e.target.id)}
  else if(e.target.dataset&&e.target.dataset.vtid!==undefined){
   S.vtin[e.target.dataset.vtid]=e.target.value;render();refocus(e.target.id)}
+ else if(e.target.dataset&&e.target.dataset.stfield!==undefined){
+  S.stf[e.target.dataset.stfield]=e.target.value;S.stErr='';render();refocus(e.target.id)}
 });
 function navFor(s){return (s==='ack'||s==='empty')?'today':(s==='products'||s==='staff')?'settings':s}
 document.addEventListener('click',function(e){
  if(e.target.classList.contains('scrim')){
-  if(S.menu){S.menu=false}else{S.sheet=null}
+  if(S.menu){S.menu=false}
+  else if(S.stSheet!==null){S.stSheet=null;S.termArm=null}
+  else{S.sheet=null}
   return render()}
  var t=e.target.closest('button,a[data-wp]');if(!t)return;var d=t.dataset;
  if(d.v){S.view=d.v}
@@ -1023,7 +1102,22 @@ document.addEventListener('click',function(e){
  else if(d.prq){S.prqo[d.prq]=true}
  else if(d.prsend!==undefined){var rv=parseFloat(S.pin[d.prsend]);
   if(rv>0){S.preq[d.prsend]={c:Math.round(rv*100)};delete S.pin[d.prsend];delete S.prqo[d.prsend]}}
- else if(d.stadd){STAFF.push(['New helper','pending'])}
+ else if(d.stadd){S.stSheet='add';S.stErr='';S.stf={n:'',p:'',e:''};S.termArm=null}
+ else if(d.stf!==undefined){S.stSheet=+d.stf;S.termArm=null}
+ else if(d.stsend){
+  var nm=S.stf.n.trim(),ph=S.stf.p.replace(/\s/g,''),em=S.stf.e.trim().toLowerCase();
+  if(!nm||!ph||!em){S.stErr=T('fillAll')}
+  else if(!/^(\+65)?[89]\d{7}$/.test(ph)){S.stErr=T('badPhone')}
+  else if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)){S.stErr=T('badEmail')}
+  else if(STAFF.some(function(x){return x.email.toLowerCase()===em})){S.stErr=T('dupEmail')}
+  else{STAFF.push({n:nm,role:'helper',st:'invited',
+   phone:(ph.indexOf('+65')===0?'+65 ':'+65 ')+ph.replace('+65','').replace(/(\d{4})(\d{4})/,'$1 $2'),
+   email:em});S.stSheet=null;S.stErr='';S.stf={n:'',p:'',e:''}}}
+ else if(d.strs!==undefined){S.rsent[d.strs]=1}
+ else if(d.sterm!==undefined){
+  if(S.termArm===+d.sterm){STAFF[+d.sterm].st='terminated';S.termArm=null}
+  else{S.termArm=+d.sterm}}
+ else if(d.strestore!==undefined){STAFF[+d.strestore].st='invited';S.termArm=null}
  else if(d.oex){S.oexp[d.oex]=!S.oexp[d.oex]}
  else if(d.iav){var pp=d.iav.split(':'),ix=+pp[0];
   S.items[ix].av=pp[1]==='y'?'y':'n';
