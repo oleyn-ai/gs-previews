@@ -800,35 +800,52 @@ function wSettle(){
   '<div style="font-size:12px;color:var(--t3)">Yesterday’s price never bleeds into today — each day’s receipt uses that day’s saved price only.</div></div>'}
 
 function wToday(){
- var done=S.items.filter(isDone).length,ready=S.items.filter(function(i){return i.st==='ready'}).length;
- var inprog=S.items.filter(function(i){return i.st==='confirmed'||i.st==='packing'}).length;
- var shorts=S.items.filter(function(i){return i.st==='short'}).length;
+ var oAct=ORDERS.filter(function(o){return !o.locked});
+ var oDone=oAct.filter(function(o){return S.ost[o.id]}).length;
+ var naN=S.items.filter(function(x){return x.av==='n'}).length;
  var q=S.q.toLowerCase();
- var items=S.items.filter(function(c){return !q||(c.en+' '+c.ms).toLowerCase().indexOf(q)>-1});
- var mn='<div class="mn"><div class="hrow"><div><div class="h1">11:00 slot</div>'+
-  '<div class="h2">'+STORE+' · Fri 1 Aug · 2 orders · pack by 10:15</div></div>'+
-  '<div class="srch">'+SVG.search+'<input id="q" placeholder="Search '+S.items.length+' lines" value="'+esc(S.q)+'"></div></div>'+
+ function obadge(st,nN){
+  return st==='ready'?'<span class="bdot"><i></i>Ready for pickup</span>'
+   :st==='partial'?'<span class="bdot w"><i></i>Ready · '+nN+' not available</span>'
+   :st==='na'?'<span class="bdot r"><i></i>Order not available</span>'
+   :'<span class="bdot n"><i></i>Packing</span>'}
+ var mn='<div class="mn"><div class="hrow"><div><div class="h1">Today</div>'+
+  '<div class="h2">'+STORE+' · Fri 1 Aug · '+oAct.length+' orders · pack by 10:15</div></div>'+
+  '<div class="srch">'+SVG.search+'<input id="q" placeholder="Search items" value="'+esc(S.q)+'"></div></div>'+
   '<div class="mcs">'+
-  '<div class="mc"><div class="fi2">'+SVG.wave+'</div><b>'+S.items.length+'</b><span>Lines this slot</span></div>'+
-  '<div class="mc"><div class="fi2 g">'+SVG.check+'</div><b>'+ready+'</b><span>Ready</span></div>'+
-  '<div class="mc"><div class="fi2">'+SVG.handoff+'</div><b>'+inprog+'</b><span>In progress</span></div>'+
-  '<div class="mc"><div class="fi2 a">'+SVG.alert+'</div><b>'+shorts+'</b><span>Short</span></div></div>'+
-  '<div class="tbl"><div class="thd"><span style="width:38px"></span><span style="flex:1">Product</span>'+
-  '<span style="min-width:36px;text-align:right">Qty</span><span style="min-width:120px">Status</span><span style="min-width:170px">Action</span></div>'+
-  (items.length?items.map(function(c){
-   var f=FLOW[c.st];
-   return '<div class="rw">'+thumb(c,'')+'<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600;color:var(--t2)">'+esc(c.en)+
-   (c.ms?' <span style="color:var(--t3);font-weight:400">'+esc(c.ms)+'</span>':'')+'</div>'+
-   '<div style="font-size:11px;color:var(--t4);margin-top:2px">'+c.o.map(function(o){return '#'+o}).join(' ')+'</div></div>'+
-   '<div class="q">'+(c.st==='short'?c.sq:c.q)+'</div>'+
-   '<div style="min-width:120px">'+stBadge(c.st)+'</div>'+
-   (f?'<div style="display:flex;gap:6px;min-width:170px"><button class="wb" style="background:'+(c.st==='pending'?'var(--ok)':'var(--mr)')+';color:#fff" data-adv="'+c.id+'">'+f.label+'</button><button class="wb" style="background:transparent;border:1.5px solid var(--wnl);color:var(--wn)" data-sh="'+c.id+'">Short</button></div>'
-    :'<div style="min-width:170px;font-size:12px;font-weight:650;color:'+(c.st==='ready'?'var(--ok)':'var(--wn)')+'">'+(c.st==='ready'?'✓ Ready for collection':'! Short '+c.sq+' of '+c.q)+'</div>')+'</div>'}).join('')
-  :'<div style="padding:26px;text-align:center;font-size:13px;color:var(--t3)">No lines match "'+esc(S.q)+'"</div>')+
-  '</div></div>';
+  '<div class="mc"><div class="fi2">'+SVG.wave+'</div><b>'+oAct.length+'</b><span>Orders today</span></div>'+
+  '<div class="mc"><div class="fi2 g">'+SVG.check+'</div><b>'+oDone+'</b><span>Ready</span></div>'+
+  '<div class="mc"><div class="fi2 a">'+SVG.alert+'</div><b>'+naN+'</b><span>Items not available</span></div>'+
+  '<div class="mc"><div class="fi2">'+SVG.box+'</div><b>'+S.items.length+'</b><span>Items today</span></div></div>'+
+  ORDERS.map(function(o){
+   if(o.locked)return '<div class="tbl" style="margin-bottom:12px;opacity:.75"><div class="rw">'+
+    '<span style="font-size:15px;font-weight:700">Order #'+o.id+'</span>'+
+    '<span class="bdot n"><i></i>'+esc(o.slot)+'</span>'+
+    '<span style="font-size:12px;color:var(--t3)">'+o.soFar+' items so far</span>'+
+    '<span class="lockrow" style="margin-left:auto">'+SVG.lock+esc(o.locked)+'</span></div></div>';
+   var st=S.ost[o.id],its=ordItems(o).filter(function(x){return !q||(x.en+' '+x.ms).toLowerCase().indexOf(q)>-1});
+   var nN=ordItems(o).filter(function(x){return x.av==='n'}).length;
+   return '<div class="tbl" style="margin-bottom:12px">'+
+   '<div class="rw" style="background:var(--pg)">'+
+   '<span style="font-size:15px;font-weight:700">Order #'+o.id+'</span>'+
+   '<span class="bdot n"><i></i>'+esc(o.slot)+'</span>'+
+   '<span style="font-size:12px;color:var(--t3)">'+o.items.length+' items · pack by '+o.packBy+'</span>'+
+   '<div style="margin-left:auto;display:flex;align-items:center;gap:8px">'+obadge(st,nN)+
+   (st!=='na'?'<button class="wb" style="background:var(--ok);color:#fff" data-ordy="'+o.id+'">Ready for Pickup</button>'+
+    '<button class="wb" style="background:transparent;border:1.5px solid var(--rdl);color:var(--rd)" data-orna="'+o.id+'">Not Available</button>':'')+
+   '</div></div>'+
+   its.map(function(x){
+    return '<div class="rw">'+thumb(x,'')+
+    '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600;color:var(--t2)">'+esc(x.en)+
+    (x.ms?' <span style="color:var(--t3);font-weight:400">'+esc(x.ms)+'</span>':'')+'</div></div>'+
+    '<div class="q">'+x.q+'</div>'+
+    '<span class="avseg"><button class="avb y" data-iav="'+x.id+':y" aria-pressed="'+!!(x.av==='y'||(st&&st!=='na'&&x.av!=='n'))+'">Available</button>'+
+    '<button class="avb nn" data-iav="'+x.id+':n" aria-pressed="'+(x.av==='n')+'">Not avail</button></span></div>'}).join('')+
+   (its.length?'':'<div style="padding:14px;text-align:center;font-size:12.5px;color:var(--t3)">No items match "'+esc(S.q)+'"</div>')+
+   '</div>'}).join('')+'</div>';
  var rr='<div class="rr"><h5>'+SVG.wave+'Slot progress</h5><div class="steps">'+
   '<div class="stp"><span class="ln2"></span><span class="ic">'+SVG.check+'</span><div><b>Orders closed</b><span>07:00</span></div></div>'+
-  '<div class="stp cur"><span class="ln2"></span><span class="ic">'+SVG.dotc+'</span><div><b>Stall packing</b><span>'+ready+' of '+S.items.length+' ready</span></div></div>'+
+  '<div class="stp cur"><span class="ln2"></span><span class="ic">'+SVG.dotc+'</span><div><b>Stall packing</b><span>'+oDone+' of '+oAct.length+' orders ready</span></div></div>'+
   '<div class="stp fut"><span class="ln2"></span><span class="ic">'+SVG.dotc+'</span><div><b>List locks</b><span>10:15</span></div></div>'+
   '<div class="stp fut"><span class="ic">'+SVG.dotc+'</span><div><b>Runner collects</b><span>about 11:00</span></div></div></div>'+
   '<h5>'+SVG.next+'Next</h5><div class="kv"><span>14:00 slot</span><b>opens 12:30</b></div>'+
@@ -893,14 +910,32 @@ function wHistory(){
 function wProfile(){
  return '<div class="mn"><div class="hrow"><div><div class="h1">Settings</div>'+
   '<div class="h2">'+STORE+' · stall settings</div></div></div>'+
-  '<div class="pcard" style="margin:0;max-width:470px"><div class="pid"><img src="'+LOGO+'" alt=""><div><b>'+STORE+'</b>'+
+  '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start">'+
+  '<div style="flex:1;min-width:300px;max-width:470px">'+
+  '<div class="pcard" style="margin:0"><div class="pid"><img src="'+LOGO+'" alt=""><div><b>'+STORE+'</b>'+
   '<span>Pasar Geylang Serai · dry goods</span></div></div>'+
-  '<div class="prow" style="cursor:default">'+SVG.check+'Accepting orders<button class="sw" data-sw="1" aria-checked="'+S.accept+'" aria-label="Accepting orders"><i></i></button></div>'+
-  '<button class="prow" data-wp2="prices">'+SVG.tag+'Prices<span class="rv">'+Object.keys(S.prices).length+' of '+S.items.length+' set '+SVG.chev+'</span></button>'+
-  '<button class="prow">'+SVG.upcoming+'Prep time<span class="rv">45 min '+SVG.chev+'</span></button>'+
-  '<button class="prow">'+SVG.today+'Opening days<span class="rv">Tue – Sun '+SVG.chev+'</span></button>'+
-  '<button class="prow">'+SVG.globe+'Language<span class="rv">English · Melayu '+SVG.chev+'</span></button></div>'+
-  '<div style="margin-top:12px;font-size:12px;color:var(--t3)">Only the stall’s own price to the market is shown on vendor surfaces. Customer prices and margins never are.</div></div>'}
+  '<button class="prow" data-wp2="prices">'+SVG.tag+T('products')+'<span class="rv">'+Object.keys(S.preq).length+' '+T('reqsShort')+' '+SVG.chev+'</span></button>'+
+  '<div class="prow" style="cursor:default">'+SVG.globe+T('language')+
+  '<span class="avseg" style="margin-left:auto"><button class="avb y" data-lang="en" aria-pressed="'+(S.lang==='en')+'">English</button>'+
+  '<button class="avb y" data-lang="ms" aria-pressed="'+(S.lang==='ms')+'">Melayu</button></span></div>'+
+  '<button class="prow" style="color:var(--mr)"><span style="color:var(--mr);display:flex">'+SVG.signout+'</span>'+T('signout')+'</button></div>'+
+  '<div class="pcard" style="margin:14px 0 0"><div class="pid"><div><b>'+T('staff')+'</b>'+
+  '<span>'+T('staffNote')+'</span></div></div>'+
+  STAFF.map(function(st,i){
+   return '<div class="prow" style="cursor:default">'+SVG.profile+
+   '<span>'+esc(st[0])+'<span style="display:block;font-size:11px;color:var(--t4);font-weight:550">'+
+   (i===0?'Owner — full access':T('staffNote'))+'</span></span>'+
+   '<span class="rv">'+(st[1]==='approved'?'<span class="bdot"><i></i>'+T('approvedw')+'</span>'
+    :'<span class="bdot w"><i></i>'+T('waitOff')+'</span>')+'</span></div>'}).join('')+
+  '<button class="prow" data-stadd="1" style="color:var(--mr)"><span style="color:var(--mr);display:flex">'+SVG.profile+'</span>'+T('addStaff')+'</button></div></div>'+
+  '<div class="pcard" style="margin:0;width:280px;text-align:center;padding-bottom:16px">'+
+  '<div class="pid" style="justify-content:center"><div><b>'+T('showQR')+'</b><span>'+STORE+'</span></div></div>'+
+  '<img src="'+QR+'" alt="Store QR" style="width:200px;height:200px;image-rendering:pixelated;margin:12px auto 8px;display:block">'+
+  '<div style="font-size:10.5px;color:var(--t4);word-break:break-all;padding:0 14px">'+STOREURL+'</div>'+
+  '<div style="display:flex;gap:8px;padding:12px 14px 0">'+
+  '<a class="gbtn" download="ajiboss-store-qr.png" href="'+QR+'">'+SVG.dl+T('download')+'</a>'+
+  '<button class="gbtn" data-shr="1">'+(S.shared?T('copied'):T('share'))+'</button></div></div></div>'+
+  '<div style="margin-top:14px;font-size:12px;color:var(--t3)">'+T('confid')+'</div></div>'}
 
 function web(){
  var page={today:wToday,upcoming:wUpcoming,print:wPrint,prices:wPrices,settle:wSettle,history:wHistory,profile:wProfile}[S.wpage]();
