@@ -563,7 +563,7 @@ function ocard(o){
    return '<div class="irow">'+(x.img?'<img class="th2" src="'+x.img+'" alt="">':'<span class="th2"></span>')+
    '<div class="inm"><b>'+esc(x.en)+'</b>'+(x.ms?'<span>'+esc(x.ms)+'</span>':'')+'</div>'+
    '<span class="iq">'+x.q+'</span>'+
-   '<span class="avseg"><button class="avb y" data-iav="'+x.id+':y" aria-pressed="'+(x.av==='y'||(st&&st!=='na'&&x.av!=='n'))+'">'+T('avail')+'</button>'+
+   '<span class="avseg"><button class="avb y" data-iav="'+x.id+':y" aria-pressed="'+!!(x.av==='y'||(st&&st!=='na'&&x.av!=='n'))+'">'+T('avail')+'</button>'+
    '<button class="avb nn" data-iav="'+x.id+':n" aria-pressed="'+(x.av==='n')+'">'+T('navail')+'</button></span></div>'}).join('');
   if(st!=='na')h+='<div class="acts"><button class="btn b-ok" data-ordy="'+o.id+'">'+T('ready')+'</button>'+
    '<button class="btn b-na" data-orna="'+o.id+'">'+T('notAvail')+'</button></div>';
@@ -612,8 +612,9 @@ function rcptCardM(r,i){
 function mobile(){
  var done=S.items.filter(isDone).length,ready=S.items.filter(function(i){return i.st==='ready'}).length,tot=S.items.length;
  var oA=ORDERS.filter(function(o){return !o.locked}),oD=oA.filter(function(o){return S.ost[o.id]}).length;
- var ttl={today:'Today',ack:'Collection',upcoming:'Next 3 days',
-   empty:'No slot open',invoices:'Invoices',settings:'Settings',products:'My products'}[S.screen];
+ var ttl={today:T('today'),ack:T('collection'),upcoming:T('upcoming'),
+   empty:T('emptySlot'),invoices:T('invoices'),settings:T('settings'),
+   products:T('products'),staff:T('staff')}[S.screen];
  var h='<div class="ph"><div class="sbar"><span>9:41</span><div class="isl"></div>'+
   '<span class="rt"><span style="font-size:11px">▮▮▮</span><span class="bat"><i></i></span></span></div>';
  if(S.off)h+='<div class="off">'+SVG.offline+'Offline — saved on this phone<span class="q">'+done+' waiting to send</span></div>';
