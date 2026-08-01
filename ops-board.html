@@ -639,7 +639,7 @@ function wOrders(){
    '</div><div style="margin-top:8px;font-size:12px;color:var(--t3)">Every order today, flat — tick rows for WooCommerce-style bulk actions.</div>';
  }else{
   var groups=[['Today — Fri 1 Aug',OP.filter(function(o){return o.st>=3}).map(function(o){
-    return [o.id,o.cu,o.slot,o.stalls,o.age,o.st===4?'cancelled':'']})].concat(ARCH.map(function(g){return [g[0],g[1]]}));
+    return [o.id,o.cu,o.slot,o.stalls,o.age,o.st===4?'cancelled':'']})]].concat(ARCH);
   body=groups.map(function(g){
    return '<div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t4);margin:14px 2px 7px">'+g[0]+' · '+g[1].length+'</div>'+
    '<div class="tbl">'+g[1].map(function(r){
