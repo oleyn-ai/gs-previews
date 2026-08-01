@@ -185,6 +185,33 @@ padding:0 10px;font:inherit;font-size:12.5px;outline:0;color:var(--tx);min-width
 font:inherit;font-size:12px;font-weight:650;cursor:pointer}
 .plock{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--t4);font-weight:600;margin-top:2px}
 .plock svg{width:11px;height:11px;flex:0 0 auto}
+/* order pipeline — CRM-style kanban */
+.kb{display:flex;gap:12px;overflow-x:auto;padding-bottom:12px;align-items:flex-start}
+.kcol{flex:0 0 238px;background:rgba(60,40,20,.035);border:1.5px dashed transparent;border-radius:14px;padding:10px 10px 4px;min-height:120px}
+:root[data-theme=dark] .kcol{background:rgba(255,255,255,.04)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]) .kcol{background:rgba(255,255,255,.04)}}
+.kcol.hov{border-color:var(--gd);background:rgba(201,150,46,.07)}
+.kch{display:flex;align-items:center;gap:7px;padding:2px 4px 10px;font-size:12.5px;font-weight:700;color:var(--t2)}
+.kch i{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.kch .cnt{font-size:10.5px;font-weight:700;background:var(--cd);border:1px solid var(--ln);border-radius:999px;padding:1px 8px;color:var(--t3)}
+.kc{background:var(--cd);border:1px solid var(--ln);border-radius:12px;padding:11px;margin-bottom:9px;box-shadow:var(--sh);cursor:grab}
+.kc:active{cursor:grabbing}
+.kc .r1{display:flex;align-items:center;gap:8px}
+.kav{width:26px;height:26px;border-radius:50%;background:var(--mr50);color:var(--mr);font-size:10px;font-weight:700;
+display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+:root[data-theme=dark] .kav{color:#EBA3AF}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]) .kav{color:#EBA3AF}}
+.kc .nm2{font-size:13px;font-weight:650;color:var(--t2);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kc .oid{font-size:11px;font-weight:650;color:var(--t4)}
+.kc .r2{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:8px}
+.kc .r3{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:10.5px;color:var(--t4);font-weight:600}
+.kadv{margin-left:auto;width:26px;height:26px;border-radius:8px;border:1px solid var(--ln);background:none;
+color:var(--t3);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.kadv svg{width:13px;height:13px}
+.addbar{display:flex;align-items:center;gap:9px;background:var(--cd);border:1px solid var(--ln);border-radius:12px;
+padding:12px 15px;margin-bottom:13px;font-size:13.5px;font-weight:650;color:var(--t2)}
+.addbar svg{width:16px;height:16px;color:var(--mr)}
+.addbar span{margin-left:auto;font-size:11.5px;font-weight:550;color:var(--t4)}
 .chipflt{display:flex;gap:5px;flex-wrap:wrap}
 .cf{font-size:11px;font-weight:650;padding:5px 11px;border-radius:999px;border:1px solid var(--ln);
 background:var(--cd);color:var(--t3);cursor:pointer}
@@ -236,6 +263,23 @@ var CIRCUIT=[["Hj Abu Bakar (Abg Butcher)",22],["Mutton King",13],["Haji Samad",
 ["Vegetables",6],["Fruit Store",14],["Ajiboss",124],["HCT (Ah Boy)",98]];
 /* The hub completeness gate has no separate view (Owner, 2026-08-01): it surfaces as the
    tote-incomplete exception and the "waiting release" state on Deliveries. */
+/* order pipeline — st: 0 Intake · 1 Collected · 2 Packaged · 3 Delivered.
+   Real transitions are event-driven (stall ready / runner collect / hub pack / Lalamove
+   webhook); dragging a card is an owner override, audited. Sample customers. */
+var KSTAGES=[['Intake','var(--t4)'],['Collected','var(--gd)'],['Packaged','var(--mr)'],['Delivered','var(--ok)']];
+var OP=[
+ {id:'8551',cu:'C. Rahman',slot:'11:00',stalls:5,age:'2 h',st:0},
+ {id:'8550',cu:'N. Salleh',slot:'11:00',stalls:5,age:'2 h',st:0},
+ {id:'8530',cu:'M. Ismail',slot:'11:00',stalls:5,age:'3 h',st:0},
+ {id:'8529',cu:'L. Wong',slot:'11:00',stalls:4,age:'3 h',st:0},
+ {id:'8543',cu:'R. Lim',slot:'11:00',stalls:2,age:'1 h',st:1},
+ {id:'8541',cu:'S. Begum',slot:'11:00',stalls:5,age:'1 h',st:1},
+ {id:'8539',cu:'H. Osman',slot:'11:00',stalls:4,age:'1 h',st:1},
+ {id:'8547',cu:'A. Farid',slot:'11:00',stalls:3,age:'40 min',st:2},
+ {id:'8535',cu:'D. Koh',slot:'11:00',stalls:5,age:'35 min',st:2},
+ {id:'8533',cu:'F. Hassan',slot:'10:00 pickup',stalls:1,age:'20 min',st:2,fail:true},
+ {id:'8524',cu:'B. Tan',slot:'09:00',stalls:2,age:'11:14',st:3},
+ {id:'8521',cu:'J. Lee',slot:'09:00',stalls:3,age:'11:02',st:3}];
 
 /* threads: private notes on the exception itself. by: st=stall of=office rn=runner */
 var THREADS={
@@ -309,7 +353,7 @@ function stBadge(st,ready,lines){
 
 /* per-section access per internal role — what a role cannot manage simply is not there */
 var ALLOW={ops:null,
- opsm:['board','slots','stalls','deliv','vendors'],
+ opsm:['board','slots','stalls','deliv','orders','vendors'],
  acct:['settle','vprices','orders']};
 var ROLETAG={ops:'Owner · full access',opsm:'Ops manager',acct:'Accounts · settling party'};
 function can(id){var a=ALLOW[S.view];return !a||a.indexOf(id)>-1}
@@ -514,22 +558,25 @@ function wVendors(){
    }
    return h}).join('')+'</div></div></div>'}
 
+function initials(n){return n.split(/[\s.]+/).filter(Boolean).slice(0,2).map(function(w){return w[0]}).join('').toUpperCase()}
 function wOrders(){
- var rows=[['#8551','C. Rahman','11:00 slot','5 stalls','packing'],['#8550','N. Salleh','11:00 slot','5 stalls','packing'],
-  ['#8547','A. Farid','11:00 slot','3 stalls','released'],['#8543','R. Lim','11:00 slot','2 stalls','hub'],
-  ['#8541','S. Begum','11:00 slot','5 stalls','hub'],['#8539','H. Osman','11:00 slot','4 stalls','hub'],
-  ['#8535','D. Koh','11:00 slot','5 stalls','released'],['#8533','F. Hassan','10:00 pickup','1 stall','failed'],
-  ['#8530','M. Ismail','11:00 slot','5 stalls','packing'],['#8529','L. Wong','11:00 slot','4 stalls','packing']];
- function b(s){return s==='released'?'<span class="bdot"><i></i>Released</span>':s==='hub'?'<span class="bdot m"><i></i>At hub</span>'
-  :s==='failed'?'<span class="bdot r"><i></i>Delivery failed</span>':'<span class="bdot w"><i></i>Stalls packing</span>'}
+ var cols=KSTAGES.map(function(s,ci){
+  var cards=OP.filter(function(o){return o.st===ci}).map(function(o){
+   return '<div class="kc" draggable="true" data-oid="'+o.id+'"><div class="r1">'+
+   '<span class="kav">'+initials(o.cu)+'</span><span class="nm2">'+esc(o.cu)+'</span><span class="oid">#'+o.id+'</span></div>'+
+   '<div class="r2"><span class="bdot n"><i></i>'+esc(o.slot)+'</span>'+
+   '<span class="bdot n"><i></i>'+o.stalls+' stall'+(o.stalls>1?'s':'')+'</span>'+
+   (o.fail?'<span class="bdot r"><i></i>delivery failed — retrying</span>':'')+'</div>'+
+   '<div class="r3">'+(ci===3?'delivered '+o.age:o.age+' in stage')+
+   (ci<3?'<button class="kadv btnp" data-oadv="'+o.id+'" aria-label="Advance">'+SVG.next+'</button>':'')+'</div></div>'});
+  return '<div class="kcol" data-kcol="'+ci+'"><div class="kch"><i style="background:'+s[1]+'"></i>'+s[0]+
+   '<span class="cnt">'+cards.length+'</span></div>'+cards.join('')+'</div>'}).join('');
  return '<div class="web np">'+sidebar()+'<div class="mn"><div class="hrow"><div><div class="h1">Orders</div>'+
-  '<div class="h2">Existing gsadmin section — now slot-aware: each order shows its slot and stall rollup</div></div></div>'+
-  '<div class="tbl"><div class="thd"><span style="min-width:56px">Order</span><span style="flex:1">Customer</span>'+
-  '<span style="min-width:90px">Slot</span><span style="min-width:70px">Stalls</span><span style="min-width:130px">Status</span></div>'+
-  rows.map(function(r){return '<div class="rw"><span style="min-width:56px;font-weight:650">'+r[0]+'</span>'+
-  '<span style="flex:1;font-size:13px">'+r[1]+'</span><span style="min-width:90px;font-size:12.5px;color:var(--t3)">'+r[2]+'</span>'+
-  '<span style="min-width:70px;font-size:12.5px;color:var(--t3)">'+r[3]+'</span><div style="min-width:130px">'+b(r[4])+'</div></div>'}).join('')+
-  '</div></div></div>'}
+  '<div class="h2">'+OP.length+' orders today · drag a card between stages — stages move themselves from stall, runner and hub events; dragging is your override, and it is audited</div></div></div>'+
+  '<div class="addbar">'+SVG.orders+'Log a manual order<span>phone or WhatsApp order — lands in Intake</span></div>'+
+  '<div class="kb">'+cols+'</div>'+
+  '<div style="margin-top:6px;font-size:12px;color:var(--t3)">Intake = order in, stalls packing · Collected = runner has it · Packaged = tote complete, gate passed · Delivered = at the door or picked up.</div>'+
+  '</div></div>'}
 
 function wCatalog(){
  var rows=[['Ajiboss',254],['HCT (Ah Boy)',137],['Store 188',129],['Biscuits, Crackers & Coffee',75],
@@ -638,6 +685,29 @@ function render(){
  fitPhone();
 }
 window.addEventListener('resize',fitPhone);
+/* kanban drag & drop */
+document.addEventListener('dragstart',function(e){
+ var c=e.target.closest?e.target.closest('[data-oid]'):null;
+ if(c){e.dataTransfer.setData('text/plain',c.dataset.oid);e.dataTransfer.effectAllowed='move'}
+});
+document.addEventListener('dragover',function(e){
+ var col=e.target.closest?e.target.closest('[data-kcol]'):null;
+ if(col){e.preventDefault();e.dataTransfer.dropEffect='move';
+  document.querySelectorAll('.kcol.hov').forEach(function(k){if(k!==col)k.classList.remove('hov')});
+  col.classList.add('hov')}
+});
+document.addEventListener('dragleave',function(e){
+ var col=e.target.closest?e.target.closest('[data-kcol]'):null;
+ if(col&&!col.contains(e.relatedTarget))col.classList.remove('hov');
+});
+document.addEventListener('drop',function(e){
+ var col=e.target.closest?e.target.closest('[data-kcol]'):null;
+ if(col){e.preventDefault();
+  var id=e.dataTransfer.getData('text/plain'),oo=null;
+  OP.forEach(function(x){if(x.id===id)oo=x});
+  if(oo){oo.st=+col.dataset.kcol;if(oo.st===3){oo.age='just now';delete oo.fail}}
+  render()}
+});
 function refocus(id){var el=document.getElementById(id);
  if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}}
 document.addEventListener('input',function(e){
@@ -665,6 +735,8 @@ document.addEventListener('click',function(e){
  else if(d.ng){S.ng[d.ng]=1}
  else if(d.ng2){S.ng[d.ng2]=1}
  else if(d.col!==undefined){S.col[d.col]=1}
+ else if(d.oadv!==undefined){var oo=null;OP.forEach(function(x){if(x.id===d.oadv)oo=x});
+  if(oo&&oo.st<3){oo.st++;if(oo.st===3){oo.age='just now';delete oo.fail}}}
  else if(d.th){S.th[d.th]=!S.th[d.th]}
  else if(d.tsend){var v=(S.tin[d.tsend]||'').trim();
   if(v){(THREADS[d.tsend]=THREADS[d.tsend]||[]).push({by:'of',who:'You · Office',t:'10:06',txt:v});
