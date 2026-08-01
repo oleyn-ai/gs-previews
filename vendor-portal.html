@@ -43,7 +43,31 @@ justify-content:space-between;padding:14px 30px 0;position:relative;color:#fff;f
 .sbar .bat i{position:absolute;inset:1.5px;width:65%;background:#fff;border-radius:1px;display:block}
 @media(max-width:529px){.sbar{display:none}}
 
-.hd{flex:0 0 auto;background:var(--mr);padding:6px 18px 15px;display:flex;align-items:center;gap:11px}
+.hd{flex:0 0 auto;background:var(--mr);padding:6px 14px 15px 12px;display:flex;align-items:center;gap:10px}
+.hbg{width:38px;height:38px;border-radius:11px;border:0;background:rgba(255,255,255,.13);color:#fff;
+display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto}
+.hbg svg{width:19px;height:19px}
+/* in-app drawer */
+.drawer{position:absolute;top:0;bottom:0;left:0;width:272px;background:var(--cd);z-index:230;
+box-shadow:8px 0 44px rgba(28,23,23,.28);display:flex;flex-direction:column;border-radius:0 22px 22px 0;overflow:hidden}
+.dhead{background:var(--mr);padding:18px 16px 15px;display:flex;align-items:center;gap:10px}
+.dhead img{width:40px;height:40px;border-radius:50%;background:#fff}
+.dhead b{color:#fff;font-size:15px;font-weight:700;display:block;line-height:18px}
+.dhead span{color:rgba(255,255,255,.6);font-size:10.5px;font-weight:600}
+.dbody{flex:1;overflow-y:auto;padding:10px;scrollbar-width:none;-ms-overflow-style:none}
+.dbody::-webkit-scrollbar{display:none}
+.dit{display:flex;align-items:center;gap:11px;padding:11px 10px;border-radius:11px;font:inherit;
+font-size:14px;font-weight:550;color:var(--t2);background:none;border:0;cursor:pointer;width:100%;text-align:left}
+.dit svg{width:18px;height:18px;color:var(--t3);flex:0 0 auto}
+.dit[aria-current=page]{background:var(--mr50);color:var(--mr);font-weight:650}
+.dit[aria-current=page] svg{color:var(--mr)}
+:root[data-theme=dark] .dit[aria-current=page],:root[data-theme=dark] .dit[aria-current=page] svg{color:#EBA3AF}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]) .dit[aria-current=page],
+:root:not([data-theme=light]) .dit[aria-current=page] svg{color:#EBA3AF}}
+.dit .dv{margin-left:auto;font-size:10.5px;font-weight:700;color:var(--t4)}
+.dey{font-size:9.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--t4);
+padding:12px 10px 4px;border-top:1px solid var(--ln);margin-top:8px}
+.dey:first-child{border-top:0;margin-top:0}
 .hd img.lg{width:38px;height:38px;border-radius:50%;flex:0 0 auto;background:#fff}
 .hd .tt{flex:1;min-width:0}
 .hd .st{font-size:10px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.55);text-transform:uppercase;
@@ -285,8 +309,7 @@ box-shadow:var(--sh)}
 
 <div class="bar">
  <div class="gp"><button class="tb" data-v="mobile" aria-pressed="true">iPhone 16</button><button class="tb" data-v="web">Web</button><button class="tb" data-v="admin">Admin</button></div>
- <div class="gp" id="mchips"><button class="tb" data-s="today" aria-pressed="true">Today</button><button class="tb" data-s="ack">Collection</button><button class="tb" data-s="upcoming">Upcoming</button><button class="tb" data-s="prices">Prices</button><button class="tb" data-s="settle">Settle</button><button class="tb" data-s="empty">Empty</button></div>
- <div class="gp"><button class="tb" id="offBtn">Offline</button><button class="tb" id="thBtn">Dark</button></div>
+ <div class="gp"><button class="tb" id="thBtn">Dark</button></div>
 </div>
 <div class="stage" id="stage"></div>
 
@@ -320,7 +343,7 @@ function key(en,ms,ov){ if(ov)return ov; return ms? en+' / '+ms : en }
 function pic(en,ms,ov){ var k=key(en,ms,ov); return IMG[k]? 'data:image/jpeg;base64,'+IMG[k] : '' }
 function mk(){return RAW.map(function(r,i){return{id:i,en:r[0],ms:r[1],v:r[2],a:r[3],q:r[4],o:r[5],
   img:pic(r[0],r[1],r[6]),st:"pending"}})}
-var S={view:"mobile",screen:"today",nav:"today",wpage:"today",wv:"11",off:false,dark:false,
+var S={view:"mobile",screen:"today",nav:"today",wpage:"today",wv:"11",off:false,dark:false,menu:false,
   sheet:null,exp:{},items:mk(),acked:null,sq:0,q:"",accept:true,lastOk:null,
   /* prices: id -> {c:cents, by:'stall'|'office'}. Two seeded to show the locked state. */
   prices:{0:{c:650,by:'stall'},2:{c:280,by:'office'}},pin:{},pedit:{},vth:{},vtin:{},rx:{1:true}};
@@ -454,8 +477,10 @@ function mobile(){
  var h='<div class="ph"><div class="sbar"><span>9:41</span><div class="isl"></div>'+
   '<span class="rt"><span style="font-size:11px">▮▮▮</span><span class="bat"><i></i></span></span></div>';
  if(S.off)h+='<div class="off">'+SVG.offline+'Offline — saved on this phone<span class="q">'+done+' waiting to send</span></div>';
- h+='<div class="hd"><img class="lg" src="'+LOGO+'" alt="Pasar Geylang Serai"><div class="tt">'+
-  '<div class="st">'+SVG.stall+STORE+' · stall list</div><div class="wv">'+ttl+'</div></div>'+
+ h+='<div class="hd"><button class="hbg" data-menu="1" aria-label="Menu">'+
+  sv('<path d="M4 6.5h16M4 12h16M4 17.5h16"/>')+'</button>'+
+  '<img class="lg" src="'+LOGO+'" alt="Pasar Geylang Serai"><div class="tt">'+
+  '<div class="st">'+SVG.stall+STORE+'</div><div class="wv">'+ttl+'</div></div>'+
   (S.screen==='today'&&S.wv==='11'?'<div class="pill urg"><span class="k">pack by</span><span class="v">10:15</span></div>':'')+'</div>';
 
  if(S.screen==='today'){
@@ -514,6 +539,25 @@ function mobile(){
   return '<button class="nv" data-nav="'+n+'"'+(n===S.nav?' aria-current="page"':'')+'>'+SVG[n]+n.charAt(0).toUpperCase()+n.slice(1)+'</button>'}).join('')+
   '</div><div class="hbar"><i></i></div>';
 
+ if(S.menu){
+  function di(id,ic,lb,dv){return '<button class="dit" data-di="'+id+'"'+(S.screen===id?' aria-current="page"':'')+'>'+SVG[ic]+lb+(dv?'<span class="dv">'+dv+'</span>':'')+'</button>'}
+  h+='<div class="scrim"></div><div class="drawer"><div class="dhead"><img src="'+LOGO+'" alt="">'+
+   '<div><b>'+STORE+'</b><span>Pasar Geylang Serai</span></div></div><div class="dbody">'+
+   '<div class="dey">Slots</div>'+
+   di('today','today','Today',(tot-done)?(tot-done)+' left':'')+
+   di('upcoming','upcoming','Upcoming')+
+   di('ack','handoff','Collection')+
+   '<div class="dey">Money</div>'+
+   di('prices','tag','Today’s prices',Object.keys(S.prices).length+'/'+S.items.length)+
+   di('settle','history','Settlement',RCPTS.filter(function(r){return r.status==='pending'}).length+' pending')+
+   '<div class="dey">Stall</div>'+
+   di('history','history','History')+
+   di('profile','profile','Profile')+
+   '<div class="dey">Demo states</div>'+
+   '<div class="dit" style="cursor:default">'+SVG.offline+'Offline<button class="sw" data-sw2="1" aria-checked="'+S.off+'" aria-label="Offline"><i></i></button></div>'+
+   di('empty','empty','Empty slot')+
+   '</div></div>';
+ }
  if(S.sheet!==null){var it=S.items[S.sheet];
   h+='<div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="ey">'+SVG.alert+'How many can you give?</div>'+
    '<div style="font-size:15px;font-weight:650;color:var(--t2)">'+esc(it.en)+(it.ms?' <span style="color:var(--t3);font-weight:450">'+esc(it.ms)+'</span>':'')+'</div>'+
@@ -710,10 +754,7 @@ function fitPhone(){
 function render(){
  document.getElementById('stage').innerHTML=S.view==='mobile'?mobile():S.view==='web'?web():admin();
  document.querySelectorAll('[data-v]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.v===S.view)});
- document.querySelectorAll('[data-s]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.s===S.screen)});
- mchips.style.display=S.view==='mobile'?'flex':'none';
- offBtn.style.display=S.view==='mobile'?'':'none';
- offBtn.setAttribute('aria-pressed',S.off);thBtn.setAttribute('aria-pressed',S.dark);
+ thBtn.setAttribute('aria-pressed',S.dark);
  fitPhone();
 }
 window.addEventListener('resize',fitPhone);
@@ -726,14 +767,18 @@ document.addEventListener('input',function(e){
  else if(e.target.dataset&&e.target.dataset.vtid!==undefined){
   S.vtin[e.target.dataset.vtid]=e.target.value;render();refocus(e.target.id)}
 });
+function navFor(s){return (s==='ack'||s==='empty')?'today':(s==='prices'||s==='settle')?'profile':s}
 document.addEventListener('click',function(e){
- if(e.target.classList.contains('scrim')){S.sheet=null;return render()}
+ if(e.target.classList.contains('scrim')){
+  if(S.menu){S.menu=false}else{S.sheet=null}
+  return render()}
  var t=e.target.closest('button,a[data-wp]');if(!t)return;var d=t.dataset;
  if(d.v){S.view=d.v}
- else if(d.s){S.screen=d.s;S.nav=(d.s==='ack'||d.s==='empty')?'today':(d.s==='prices'||d.s==='settle')?'profile':d.s;S.sheet=null}
+ else if(d.menu){S.menu=true}
+ else if(d.di){S.screen=d.di;S.nav=navFor(d.di);S.menu=false;S.sheet=null}
+ else if(d.sw2){S.off=!S.off}
  else if(d.rx!==undefined){S.rx[d.rx]=!S.rx[d.rx]}
  else if(d.s2){S.screen=d.s2;S.nav='profile'}
- else if(t.id==='offBtn'){S.off=!S.off}
  else if(t.id==='thBtn'){S.dark=!S.dark;document.documentElement.setAttribute('data-theme',S.dark?'dark':'light')}
  else if(d.nav){S.nav=d.nav;S.screen=d.nav;S.sheet=null}
  else if(d.wp){S.wpage=d.wp}
