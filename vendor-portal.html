@@ -443,7 +443,7 @@ en:{today:'Today',upcoming:'Upcoming',invoices:'Invoices',settings:'Settings',
  demo:'Demo states',offline:'Offline',emptySlot:'Empty slot',collection:'Collection',
  staffNote:'Sees Today & Upcoming only',addStaff:'Add staff login',waitOff:'Waiting office approval',
  approvedw:'Approved',staffView:'Staff view',download:'Download',share:'Share',close:'Close',copied:'Link copied ✓',
- tomorrow:'Tomorrow',soFar:'so far',
+ tomorrow:'Tomorrow',
  provUp:'Provisional · numbers can go up or down until cut-off',
  activeW:'Active',phoneL:'Phone',emailL:'Email',emailHint:'The password will be sent to this email',
  sendInvite:'Send invite',invitedNote:'Invite sent — password emailed · office approval pending',
@@ -469,7 +469,7 @@ ms:{today:'Hari Ini',upcoming:'Akan Datang',invoices:'Invois',settings:'Tetapan'
  demo:'Mod demo',offline:'Luar talian',emptySlot:'Slot kosong',collection:'Kutipan',
  staffNote:'Nampak Hari Ini & Akan Datang sahaja',addStaff:'Tambah log masuk pekerja',waitOff:'Menunggu kelulusan pejabat',
  approvedw:'Diluluskan',staffView:'Pandangan pekerja',download:'Muat turun',share:'Kongsi',close:'Tutup',copied:'Pautan disalin ✓',
- tomorrow:'Esok',soFar:'setakat ini',
+ tomorrow:'Esok',
  provUp:'Sementara · angka boleh naik atau turun sehingga cut-off',
  activeW:'Aktif',phoneL:'Telefon',emailL:'Emel',emailHint:'Kata laluan akan dihantar ke emel ini',
  sendInvite:'Hantar jemputan',invitedNote:'Jemputan dihantar — kata laluan diemel · tunggu kelulusan pejabat',
@@ -571,7 +571,7 @@ function ocard(o){
  if(o.locked){
   return '<div class="c" style="opacity:.78;box-shadow:none"><div class="ohd" style="cursor:default">'+
   '<span class="onum">Order #'+o.id+'</span><span class="chip">'+esc(o.slot)+'</span>'+
-  '<span class="bdot n" style="margin-left:auto"><i></i>'+o.soFar+' items so far</span></div>'+
+  '<span class="bdot n" style="margin-left:auto"><i></i>'+o.soFar+' items</span></div>'+
   '<div class="stat" style="color:var(--t3)"><span class="dot" style="background:var(--pg)">'+SVG.lock+'</span>'+esc(o.locked)+'</div></div>';
  }
  var st=S.ost[o.id],exp=S.oexp[o.id],its=ordItems(o);
@@ -600,20 +600,18 @@ function ocard(o){
 
 /* upcoming order card — same shape as Today's, zero actions, provisional */
 function ucard(o){
- var exp=S.uex[o.id],n=o.items.reduce(function(a,x){return a+x[2]},0);
+ var exp=S.uex[o.id];
  var h='<div class="c" style="box-shadow:none"><button class="ohd" data-uex="'+o.id+'">'+
   '<span class="onum">Order #'+o.id+'</span><span class="chip">'+esc(o.slot)+'</span>'+
-  '<span class="bdot w"><i></i>'+T('soFar')+'</span>'+
   (!exp?'<span class="tstrip">'+o.items.slice(0,3).map(function(x){var im=pic(x[0],x[1]);
     return im?'<img src="'+im+'" alt="">':''}).join('')+'</span>':'')+
   '<span class="chev'+(exp?' open':'')+'">'+SVG.chev+'</span></button>'+
-  '<div style="font-size:11.5px;color:var(--t3);margin-top:4px">'+o.items.length+' item'+(o.items.length>1?'s':'')+' · '+n+' '+T('soFar')+' · '+esc(o.date)+'</div>';
+  '<div style="font-size:11.5px;color:var(--t3);margin-top:4px">'+o.items.length+' item'+(o.items.length>1?'s':'')+' · '+esc(o.date)+'</div>';
  if(exp){
   h+=o.items.map(function(x){var im=pic(x[0],x[1]);
    return '<div class="irow">'+(im?'<img class="th2" src="'+im+'" alt="">':'<span class="th2"></span>')+
    '<div class="inm"><b>'+esc(x[0])+'</b>'+(x[1]?'<span>'+esc(x[1])+'</span>':'')+'</div>'+
-   '<span class="iq" style="color:var(--t3)">'+x[2]+'</span>'+
-   '<span style="font-size:10px;color:var(--t4);font-weight:650;min-width:44px">'+T('soFar')+'</span></div>'}).join('');
+   '<span class="iq" style="color:var(--t3)">'+x[2]+'</span></div>'}).join('');
  }
  return h+'</div>'}
 function upSections(){
@@ -903,7 +901,7 @@ function wToday(){
    if(o.locked)return '<div class="tbl" style="margin-bottom:12px;opacity:.75"><div class="rw">'+
     '<span style="font-size:15px;font-weight:700">Order #'+o.id+'</span>'+
     '<span class="bdot n"><i></i>'+esc(o.slot)+'</span>'+
-    '<span style="font-size:12px;color:var(--t3)">'+o.soFar+' items so far</span>'+
+    '<span style="font-size:12px;color:var(--t3)">'+o.soFar+' items</span>'+
     '<span class="lockrow" style="margin-left:auto">'+SVG.lock+esc(o.locked)+'</span></div></div>';
    var st=S.ost[o.id],its=ordItems(o).filter(function(x){return !q||(x.en+' '+x.ms).toLowerCase().indexOf(q)>-1});
    var nN=ordItems(o).filter(function(x){return x.av==='n'}).length;
@@ -943,12 +941,12 @@ function wUpcoming(){
    '<span style="font-size:15px;font-weight:700">Order #'+o.id+'</span>'+
    '<span class="bdot n"><i></i>'+esc(o.slot)+'</span>'+
    '<span style="font-size:12px;color:var(--t3)">'+esc(o.date)+' · '+o.items.length+' item'+(o.items.length>1?'s':'')+'</span>'+
-   '<span class="bdot w" style="margin-left:auto"><i></i>'+T('soFar')+'</span></div>'+
+   '</div>'+
    o.items.map(function(x){var im=pic(x[0],x[1]);
     return '<div class="rw">'+(im?'<img src="'+im+'" alt="">':'<div style="width:38px"></div>')+
     '<div style="flex:1"><div style="font-size:14px;font-weight:600;color:var(--t2)">'+esc(x[0])+
     (x[1]?' <span style="color:var(--t3);font-weight:400">'+esc(x[1])+'</span>':'')+'</div></div>'+
-    '<div class="q" style="color:var(--t3)">'+x[2]+'</div><div class="qu2">'+T('soFar')+'</div></div>'}).join('')+
+    '<div class="q" style="color:var(--t3)">'+x[2]+'</div><div class="qu2"></div></div>'}).join('')+
    '</div>'}).join('')}
  return '<div class="mn"><div class="hrow"><div><div class="h1">'+T('upcoming')+'</div>'+
   '<div class="h2">'+STORE+'</div></div><span class="bdot w"><i></i>'+T('provUp')+'</span></div>'+
