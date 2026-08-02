@@ -133,6 +133,13 @@ font:inherit;font-size:11px;font-weight:650;color:var(--t3);cursor:pointer}
 background:var(--cd);color:var(--t3);cursor:pointer;font-family:inherit}
 .cf[aria-pressed=true]{background:var(--mr);border-color:var(--mr);color:#fff}
 .invov{position:absolute;inset:0;z-index:240;display:flex;flex-direction:column;background:var(--cd)}
+/* overlays keep the phone chrome: status bar + a real app header above the paper */
+.ovh{flex:0 0 auto;background:var(--mr);color:#fff;padding:2px 14px 14px;display:flex;align-items:center;gap:10px}
+.ovh b{font-size:17px;font-weight:700;letter-spacing:-.01em;flex:1;min-width:0;
+white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ovb{width:34px;height:34px;border-radius:10px;border:0;background:rgba(255,255,255,.14);color:#fff;
+display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto}
+.ovb svg{width:18px;height:18px}
 .invp{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;
 padding:22px 20px;background:#fff;color:#111}
 .invp::-webkit-scrollbar{display:none}
@@ -529,11 +536,103 @@ invoices:sv('<path d="M6 3.5h12v17l-2.4-1.6-2.4 1.6-1.2-1.6-1.2 1.6-2.4-1.6L6 20
 settings:sv('<circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1"/>'),
 box:sv('<path d="M3.5 7.6 12 3.5l8.5 4.1v8.8L12 20.5 3.5 16.4z"/><path d="M3.5 7.6 12 11.8l8.5-4.2M12 11.8v8.7"/>'),
 dl:sv('<path d="M12 3.5v11M7.5 10 12 14.5 16.5 10"/><path d="M4.5 17.5v3h15v-3"/>'),
+back:sv('<path d="M20 12H4.5M10.5 5.5 4 12l6.5 6.5"/>'),
 tag:sv('<path d="M12.6 3.5h7.9v7.9l-9.1 9.1-7.9-7.9z"/><circle cx="16.2" cy="7.8" r="1.5"/>'),
 lock:sv('<rect x="5.5" y="10.5" width="13" height="9.5" rx="2"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3"/>'),
 pen:sv('<path d="M4 20h16"/><path d="m13.7 5 5.3 5.3L9.3 20H4v-5.3z"/><path d="m13.7 5 2-2 5.3 5.3-2 2"/>')}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
+
+/* ---------- minimal PDF writer (no libraries — the CSP blocks CDNs) ----------
+   Helvetica AFM widths for codes 32..126, so right-aligned money actually aligns. */
+var HW=[278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,
+556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,
+1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,
+667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,
+333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,
+556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+function pAsc(s){return String(s).replace(/[·•]/g,'-').replace(/[—–]/g,'-')
+ .replace(/[’‘]/g,"'").replace(/[“”]/g,'"').replace(/[^\x20-\x7E]/g,'')}
+function pW(s,sz,bold){var w=0;for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);
+ w+=(c>=32&&c<=126)?HW[c-32]:556}return w*sz/1000*(bold?1.06:1)}
+function pEsc(s){return s.replace(/[\\()]/g,'\\$&')}
+function f1(n){return (Math.round(n*10)/10).toString()}
+function pad10(n){n=String(n);while(n.length<10)n='0'+n;return n}
+function buildPDF(draw){
+ var W=595,H=842,pages=[],ops=null;
+ var api={W:W,H:H,
+  page:function(){ops=[];pages.push(ops)},
+  t:function(s,x,y,sz,bold,g){s=pAsc(s);
+   ops.push('BT /'+(bold?'F2':'F1')+' '+sz+' Tf '+(g==null?0:g)+' g '+f1(x)+' '+f1(y)+' Td ('+pEsc(s)+') Tj ET')},
+  r:function(s,xr,y,sz,bold,g){s=pAsc(s);api.t(s,xr-pW(s,sz,bold),y,sz,bold,g)},
+  ln:function(x1,x2,y,g,w){ops.push((g==null?0.75:g)+' G '+(w||0.5)+' w '+
+   f1(x1)+' '+f1(y)+' m '+f1(x2)+' '+f1(y)+' l S')}};
+ draw(api);
+ var objs=[];
+ objs[1]='<< /Type /Catalog /Pages 2 0 R >>';
+ var kids=[];for(var i=0;i<pages.length;i++)kids.push((5+i*2)+' 0 R');
+ objs[2]='<< /Type /Pages /Kids ['+kids.join(' ')+'] /Count '+pages.length+' >>';
+ objs[3]='<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+ objs[4]='<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
+ for(var i=0;i<pages.length;i++){var cs=pages[i].join('\n');
+  objs[5+i*2]='<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+W+' '+H+
+   '] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents '+(6+i*2)+' 0 R >>';
+  objs[6+i*2]='<< /Length '+cs.length+' >>\nstream\n'+cs+'\nendstream'}
+ var out='%PDF-1.4\n',offs=[];
+ for(var n=1;n<objs.length;n++){offs[n]=out.length;out+=n+' 0 obj\n'+objs[n]+'\nendobj\n'}
+ var xref=out.length;
+ out+='xref\n0 '+objs.length+'\n0000000000 65535 f \n';
+ for(var n=1;n<objs.length;n++)out+=pad10(offs[n])+' 00000 n \n';
+ out+='trailer\n<< /Size '+objs.length+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF';
+ var b=new Uint8Array(out.length);
+ for(var i=0;i<out.length;i++)b[i]=out.charCodeAt(i)&0xFF;
+ return b}
+function pdfDownload(bytes,name){
+ var blob=new Blob([bytes],{type:'application/pdf'});
+ var u=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=u;a.download=name;a.style.display='none';
+ document.body.appendChild(a);a.click();
+ setTimeout(function(){URL.revokeObjectURL(u);a.parentNode&&a.parentNode.removeChild(a)},1500)}
+
+/* invoice / statement as a real downloadable PDF */
+function invPDFBytes(which){
+ var isS=which==='stmt',rs=isS?RCPTS.filter(function(r){return !r.building}):[RCPTS[which]];
+ var gt=0;rs.forEach(function(r){gt+=rTotal(r)});
+ return buildPDF(function(p){
+  var M=52,R=p.W-52,y;
+  p.page();y=p.H-72;
+  p.t('Pasar Geylang Serai',M,y,17,true);y-=14;
+  p.t(isS?'STATEMENT - JUL 2026':'INVOICE',M,y,8.5,true,0.45);y-=17;
+  p.t(STORE+' - Geylang Serai Market'+(isS?'':' - '+rs[0].no+' - '+rs[0].d),M,y,10,false,0.35);
+  y-=16;p.ln(M,R,y,0.55,1);y-=20;
+  rs.forEach(function(r){
+   if(y<120){p.page();y=p.H-72}
+   if(isS){p.t(r.d+' - '+r.no,M,y,10.5,true);y-=15}
+   r.lines.forEach(function(l){
+    if(y<95){p.page();y=p.H-72}
+    var it=S.items[l[0]];
+    p.t(it.en+(it.ms?' / '+it.ms:'')+'  x '+l[1],M,y,10,false,0.12);
+    p.r(fmt(l[1]*l[2]),R,y,10,false,0.12);
+    p.t(fmt(l[2])+' each',M,y-10,8,false,0.5);
+    y-=15;p.ln(M,R,y,0.85);y-=13});
+   p.t(isS?r.d+' total':'Total',M,y,11,true);
+   p.r(fmt(rTotal(r)),R,y,11,true);
+   y-=11;p.ln(M,R,y,0.25,0.9);y-=15;
+   p.t(r.status==='paid'?'Payment received - '+r.paidAt+(r.pnote?' - '+r.pnote:''):'Payment pending',
+    M,y,9,false,0.45);y-=24});
+  if(isS){p.ln(M,R,y+8,0.25,1);y-=2;
+   p.t('JUL 2026',M,y,12.5,true);p.r(fmt(gt),R,y,12.5,true);y-=26}
+  if(y<70){p.page();y=p.H-72}
+  p.t('Auto-generated from collection records. Quantities are what the runner received.',M,y,8,false,0.55);
+  p.t('Payment is made outside the app. This document is the record of it.',M,y-11,8,false,0.55)})}
+function invPDF(which){
+ var isS=which==='stmt';
+ pdfDownload(invPDFBytes(which),
+  isS?'geylang-serai-statement-jul-2026.pdf'
+     :('geylang-serai-'+String(RCPTS[which].no).toLowerCase()+'.pdf'))}
 function thumb(c,cls){return c.img?'<img class="'+cls+'" src="'+c.img+'" alt="">':'<div class="'+cls+'"></div>'}
+function sbarH(){return '<div class="sbar"><span>9:41</span><div class="isl"></div>'+
+ '<span class="rt"><span style="font-size:11px">▮▮▮</span><span class="bat"><i></i></span></span></div>'}
+function ovHead(title){return '<button class="ovb" data-ovc="1" aria-label="Back">'+SVG.back+'</button><b>'+title+'</b>'}
 function fillBadge(f){var okf=f==='100%';return '<span class="bdot'+(okf?'':' w')+'"><i></i>'+f+' filled</span>'}
 function fmt(c){return 'S$'+(c/100).toFixed(2)}
 function priceInput(id,ph){return '<div class="pin"><b>S$</b><input id="pi'+id+'" data-pid="'+id+'" inputmode="decimal" placeholder="'+(ph||'0.00')+'" value="'+esc(S.pin[id]||'')+'"></div>'}
@@ -659,8 +758,7 @@ function mobile(){
  var ttl={today:T('today'),ack:T('collection'),upcoming:T('upcoming'),
    empty:T('emptySlot'),invoices:T('invoices'),settings:T('settings'),
    products:T('products'),staff:T('staff')}[S.screen];
- var h='<div class="ph"><div class="sbar"><span>9:41</span><div class="isl"></div>'+
-  '<span class="rt"><span style="font-size:11px">▮▮▮</span><span class="bat"><i></i></span></span></div>';
+ var h='<div class="ph">'+sbarH();
  if(S.off)h+='<div class="off">'+SVG.offline+'Offline — saved on this phone<span class="q">'+done+' waiting to send</span></div>';
  h+='<div class="hd"><button class="hbg" data-menu="1" aria-label="Menu">'+
   sv('<path d="M4 6.5h16M4 12h16M4 17.5h16"/>')+'</button>'+
@@ -710,7 +808,7 @@ function mobile(){
    '<div class="scroll"><div class="list">'+
    '<div class="c" style="box-shadow:none"><div class="top"><div class="nb">'+
    '<div class="n1">'+T('stmt')+' · Jul 2026</div><div class="n2">'+T('stmtSub')+'</div></div>'+
-   '<button class="btn b-mr" style="flex:0 0 auto;height:38px;padding:0 13px;display:flex;align-items:center;gap:6px" data-stmt="1">'+SVG.dl+'PDF</button></div></div>'+
+   '<button class="btn b-mr" style="flex:0 0 auto;height:38px;padding:0 13px;display:flex;align-items:center;gap:6px" data-pdf="stmt">'+SVG.dl+'PDF</button></div></div>'+
    (S.ifl==='all'?'<div class="c" style="box-shadow:none;opacity:.8"><div class="top"><div class="nb">'+
     '<div class="n1">Fri 1 Aug — '+T('todayw')+'</div><div class="n2">'+T('building')+'</div>'+
     '<div class="meta"><span class="bdot m"><i></i>'+T('collecting')+'</span></div></div></div></div>':'')+
@@ -721,7 +819,7 @@ function mobile(){
       :'<span class="bdot w"><i></i>'+T('payPend')+'</span>')+'</div></div>'+
     '<div class="qb"><div class="pv">'+fmt(rTotal(r))+'</div></div></div>'+
     '<div class="acts" style="margin-top:9px"><button class="btn" style="background:var(--pg);border:1.5px solid var(--ln);color:var(--t2)" data-inv="'+i+'">'+T('viewInv')+'</button>'+
-    '<button class="btn b-mr" style="flex:0 0 auto;padding:0 14px;display:flex;align-items:center;justify-content:center;gap:6px" data-inv="'+i+'">'+SVG.dl+'PDF</button></div></div>'}).join('')+
+    '<button class="btn b-mr" style="flex:0 0 auto;padding:0 14px;display:flex;align-items:center;justify-content:center;gap:6px" data-pdf="'+i+'">'+SVG.dl+'PDF</button></div></div>'}).join('')+
    (fl.length?'':'<div class="mt"><p>'+T('emptyFl')+'</p></div>')+
    '</div></div>';
  } else if(S.screen==='settings'){
@@ -806,20 +904,21 @@ function mobile(){
   h+='</div>';
  }
  if(S.qr){
-  h+='<div class="invov"><div class="invp" style="display:flex;flex-direction:column;align-items:center;text-align:center">'+
+  h+='<div class="invov">'+sbarH()+'<div class="ovh">'+ovHead(T('showQR'))+'</div>'+
+   '<div class="invp" style="display:flex;flex-direction:column;align-items:center;text-align:center">'+
    '<div class="invh" style="flex-direction:column;gap:6px"><img src="'+LOGO+'" alt=""><div><b>'+STORE+'</b>'+
    '<span>PASAR GEYLANG SERAI</span></div></div>'+
    '<img src="'+QR+'" alt="Store QR" style="width:78%;max-width:300px;image-rendering:pixelated;margin:14px 0 10px">'+
    '<div style="font-size:12px;color:#555;word-break:break-all">'+STOREURL+'</div>'+
    '<div style="font-size:11.5px;color:#888;margin-top:10px">Customers scan this to open your stall on the shop.</div></div>'+
    '<div class="invfoot"><a class="gbtn" download="ajiboss-store-qr.png" href="'+QR+'">'+SVG.dl+T('download')+'</a>'+
-   '<button class="gbtn" data-shr="1">'+(S.shared?T('copied'):T('share'))+'</button>'+
-   '<button class="gbtn" style="flex:0 0 auto;padding:0 16px" data-qrc="1">'+T('close')+'</button></div></div>';
+   '<button class="gbtn" data-shr="1">'+(S.shared?T('copied'):T('share'))+'</button></div></div>';
  }
  if(S.inv!==null){
   var isS=S.inv==='stmt',rs=isS?RCPTS.filter(function(r){return !r.building}):[RCPTS[S.inv]];
   var gt=0;rs.forEach(function(r){gt+=rTotal(r)});
-  h+='<div class="invov"><div class="invp">'+
+  h+='<div class="invov">'+sbarH()+'<div class="ovh">'+
+   ovHead(isS?T('stmt')+' · Jul 2026':(rs[0].no||T('invoices')))+'</div><div class="invp">'+
    '<div class="invh"><img src="'+LOGO+'" alt=""><div><b>Pasar Geylang Serai</b>'+
    '<span>'+(isS?T('stmt').toUpperCase()+' · JUL 2026':'INVOICE')+'</span></div></div>'+
    '<div style="font-size:12px;color:#555;margin-bottom:12px">'+STORE+' · Geylang Serai Market'+(isS?'':' · '+rs[0].no+' · '+rs[0].d)+'</div>'+
@@ -830,8 +929,7 @@ function mobile(){
     '<div style="font-size:11px;color:#777;margin:6px 0 2px">'+(r.status==='paid'?T('payRecd')+' · '+r.paidAt+(r.pnote?' · '+esc(r.pnote):''):T('payPend'))+'</div>'}).join('')+
    (isS?'<div class="il" style="margin-top:14px;border-bottom:0"><span style="font-weight:800">JUL 2026</span><b style="font-weight:800">'+fmt(gt)+'</b></div>':'')+
    '<div style="font-size:10px;color:#999;margin-top:16px">Auto-generated from collection records · quantities are what the runner received</div></div>'+
-   '<div class="invfoot"><button class="gbtn" data-pr="1">'+SVG.dl+T('download')+' PDF</button>'+
-   '<button class="gbtn" style="flex:0 0 auto;padding:0 16px" data-invc="1">'+T('close')+'</button></div></div>';
+   '<div class="invfoot"><button class="gbtn" data-pdf="'+(isS?'stmt':S.inv)+'">'+SVG.dl+T('download')+' PDF</button></div></div>';
  }
  if(S.sheet!==null){var it=S.items[S.sheet];
   h+='<div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="ey">'+SVG.alert+'How many can you give?</div>'+
@@ -853,8 +951,9 @@ function wSidebar(){
   '<div class="gl">'+SVG.stall+'Stall</div>'+a('prices','tag','Products')+a('settle','invoices','Invoices')+a('profile','settings','Settings')+'</div>'}
 
 function wSettle(){
- return '<div class="mn"><div class="hrow"><div><div class="h1">Invoices</div>'+
-  '<div class="h2">'+STORE+' · auto receipt per day — collected quantity × that day’s price · payment recorded, never processed</div></div></div>'+
+ return '<div class="mn"><div class="hrow"><div><div class="h1">'+T('invoices')+'</div>'+
+  '<div class="h2">'+STORE+' · auto invoice per day — collected quantity × that day’s price · payment recorded, never processed</div></div>'+
+  '<button class="wb" style="background:var(--mr);color:#fff;height:36px;display:flex;align-items:center;gap:6px" data-pdf="stmt">'+SVG.dl+T('stmt')+' PDF</button></div>'+
   RCPTS.map(function(r,i){
    if(r.building)return '<div class="tbl" style="margin-bottom:10px"><div class="rw"><div style="flex:1">'+
     '<div style="font-size:14px;font-weight:600">'+r.d+' — today</div>'+
@@ -865,8 +964,9 @@ function wSettle(){
     '<div style="font-size:14px;font-weight:600">'+r.d+'</div>'+
     '<div style="font-size:11.5px;color:var(--t3);margin-top:2px">'+r.lines.length+' items · auto receipt</div></div>'+
     '<div class="pv" style="min-width:90px;text-align:right">'+fmt(tot)+'</div>'+
-    '<div style="min-width:150px;display:flex;justify-content:flex-end">'+(paid?'<span class="bdot"><i></i>Paid · '+r.paidAt+'</span>':'<span class="bdot w"><i></i>Pending payment</span>')+'</div>'+
-    '<button class="wb" style="background:transparent;border:1px solid var(--ln);color:var(--t2)" data-rx="'+i+'">'+(S.rx[i]?'Hide':'Details')+'</button></div>';
+    '<div style="min-width:150px;display:flex;justify-content:flex-end">'+(paid?'<span class="bdot"><i></i>'+T('payRecd')+' · '+r.paidAt+'</span>':'<span class="bdot w"><i></i>'+T('payPend')+'</span>')+'</div>'+
+    '<button class="wb" style="background:transparent;border:1px solid var(--ln);color:var(--t2)" data-rx="'+i+'">'+(S.rx[i]?'Hide':'Details')+'</button>'+
+    '<button class="wb" style="background:var(--mr);color:#fff;display:flex;align-items:center;gap:5px" data-pdf="'+i+'">'+SVG.dl+'PDF</button></div>';
    if(S.rx[i]){
     h+=r.lines.map(function(l){return '<div class="rw" style="padding:7px 13px"><span style="flex:1;font-size:12.5px;color:var(--t2)">'+esc(S.items[l[0]].en)+'</span>'+
      '<span style="min-width:40px;text-align:right;font-weight:650">'+l[1]+'</span>'+
@@ -1121,6 +1221,8 @@ document.addEventListener('click',function(e){
  else if(d.ifl){S.ifl=d.ifl}
  else if(d.inv!==undefined){S.inv=+d.inv}
  else if(d.stmt){S.inv='stmt'}
+ else if(d.pdf!==undefined){invPDF(d.pdf==='stmt'?'stmt':+d.pdf);return}
+ else if(d.ovc){S.inv=null;S.qr=false}
  else if(d.invc){S.inv=null}
  else if(d.qr){S.qr=true;S.shared=false}
  else if(d.qrc){S.qr=false}
