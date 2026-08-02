@@ -379,9 +379,17 @@ var RAW=[
 ["Cumin Powder","Serbuk Jintan (Babas)","","",1,["8530"]]];
 var SELL=[730,600,320,310,100,250,250];            /* live shop prices, cents */
 
-var UP=[["Sat 2 Aug","Keripik Sukun","",3],["Sat 2 Aug","Keropok Udang Aloha","",2],
-["Sun 3 Aug","Macaroni Elbow (Large)","",2],["Sun 3 Aug","Bestari Tepung Goreng Pisang","",2],
-["Mon 4 Aug","Cumin Powder","Serbuk Jintan (Babas)",1]];
+/* upcoming, order-wise like Today (owner ruling 2026-08-01): Tomorrow section first,
+   then later days. Provisional - orders are still editable until their cut-off. */
+var UPO=[
+ {id:'8552',date:'Sat 2 Aug',tomorrow:true,slot:'11:00',
+  items:[['Keripik Sukun','',2],['Keropok Udang Aloha','',1]]},
+ {id:'8554',date:'Sat 2 Aug',tomorrow:true,slot:'14:00',
+  items:[['Keripik Sukun','',1],['Keropok Udang Aloha','',1]]},
+ {id:'8557',date:'Sun 3 Aug',slot:'11:00',
+  items:[['Macaroni Elbow (Large)','',2],['Bestari Tepung Goreng Pisang','',2]]},
+ {id:'8561',date:'Mon 4 Aug',slot:'11:00',
+  items:[['Cumin Powder','Serbuk Jintan (Babas)',1]]}];
 
 var HIST=[["Thu 31 Jul","11:00 slot",9,0,"100%"],["Wed 30 Jul","11:00 slot",6,1,"89%"],
 ["Tue 29 Jul","14:00 slot",4,0,"100%"],["Sun 27 Jul","11:00 slot",11,0,"100%"],
@@ -406,7 +414,7 @@ var S={view:"mobile",screen:"today",nav:"today",wpage:"today",wv:"11",off:false,
   /* prices: id -> {c:cents, by:'stall'|'office'}. Two seeded to show the locked state. */
   prices:{0:{c:650,by:'stall'},2:{c:280,by:'office'}},pin:{},pedit:{},vth:{},vtin:{},rx:{1:true},
   ifl:'all',inv:null,preq:{},prqo:{},lang:'en',qr:false,shared:false,staffv:false,
-  stSheet:null,stf:{n:'',p:'',e:''},stErr:'',termArm:null,rsent:{}};
+  stSheet:null,stf:{n:'',p:'',e:''},stErr:'',termArm:null,rsent:{},uex:{'8552':true},naArm:null};
 function stBadgeS(st){
  return st==='active'?'<span class="bdot"><i></i>'+T('activeW')+'</span>'
   :st==='invited'?'<span class="bdot w"><i></i>'+T('waitOff')+'</span>'
@@ -429,10 +437,14 @@ en:{today:'Today',upcoming:'Upcoming',invoices:'Invoices',settings:'Settings',
  todayw:'today',building:'Invoice builds itself from what the runner collects',collecting:'collecting',
  viewInv:'View invoice',emptyFl:'Nothing here for this filter.',
  showQR:'Show store QR',language:'Language',signout:'Sign out',reqsShort:'requests',
- ready:'Ready for Pickup',notAvail:'Not Available',avail:'Available',navail:'Not avail',
+ ready:'Ready for Pickup',notAvail:'Out of stock',avail:'Available',navail:'No stock',
+ naArm:'Tap again — tells the office',naStat:'Out of stock — office notified',
+ readyStat:'Ready for pickup',partStat:'Ready · {n} out of stock — office notified',
  demo:'Demo states',offline:'Offline',emptySlot:'Empty slot',collection:'Collection',
  staffNote:'Sees Today & Upcoming only',addStaff:'Add staff login',waitOff:'Waiting office approval',
  approvedw:'Approved',staffView:'Staff view',download:'Download',share:'Share',close:'Close',copied:'Link copied ✓',
+ tomorrow:'Tomorrow',soFar:'so far',
+ provUp:'Provisional · numbers can go up or down until cut-off',
  activeW:'Active',phoneL:'Phone',emailL:'Email',emailHint:'The password will be sent to this email',
  sendInvite:'Send invite',invitedNote:'Invite sent — password emailed · office approval pending',
  resetPw:'Reset password',resetSent:'Reset link sent to',resend:'Resend invite',
@@ -451,10 +463,14 @@ ms:{today:'Hari Ini',upcoming:'Akan Datang',invoices:'Invois',settings:'Tetapan'
  todayw:'hari ini',building:'Invois terbina dari kutipan runner',collecting:'sedang kutip',
  viewInv:'Lihat invois',emptyFl:'Tiada untuk tapisan ini.',
  showQR:'Papar QR kedai',language:'Bahasa',signout:'Log keluar',reqsShort:'permohonan',
- ready:'Sedia untuk Diambil',notAvail:'Tidak Tersedia',avail:'Ada',navail:'Tiada',
+ ready:'Sedia untuk Diambil',notAvail:'Habis Stok',avail:'Ada',navail:'Habis',
+ naArm:'Tekan lagi — beritahu pejabat',naStat:'Habis stok — pejabat dimaklumkan',
+ readyStat:'Sedia untuk diambil',partStat:'Sedia · {n} habis stok — pejabat dimaklumkan',
  demo:'Mod demo',offline:'Luar talian',emptySlot:'Slot kosong',collection:'Kutipan',
  staffNote:'Nampak Hari Ini & Akan Datang sahaja',addStaff:'Tambah log masuk pekerja',waitOff:'Menunggu kelulusan pejabat',
  approvedw:'Diluluskan',staffView:'Pandangan pekerja',download:'Muat turun',share:'Kongsi',close:'Tutup',copied:'Pautan disalin ✓',
+ tomorrow:'Esok',soFar:'setakat ini',
+ provUp:'Sementara · angka boleh naik atau turun sehingga cut-off',
  activeW:'Aktif',phoneL:'Telefon',emailL:'Emel',emailHint:'Kata laluan akan dihantar ke emel ini',
  sendInvite:'Hantar jemputan',invitedNote:'Jemputan dihantar — kata laluan diemel · tunggu kelulusan pejabat',
  resetPw:'Set semula kata laluan',resetSent:'Pautan set semula dihantar ke',resend:'Hantar semula jemputan',
@@ -567,20 +583,9 @@ function ocard(o){
    (its.length>3?'<span class="morep">+'+(its.length-3)+'</span>':'')+'</span>':'')+
   '<span class="chev'+(exp?' open':'')+'">'+SVG.chev+'</span></button>'+
   '<div style="font-size:11.5px;color:var(--t3);margin-top:4px">'+its.length+' item'+(its.length>1?'s':'')+' · pack by '+o.packBy+'</div>';
- if(st==='ready')h+='<div class="stat" style="color:var(--ok)"><span class="dot anim" style="background:rgba(31,122,77,.14)">'+SVG.check+'</span>Ready for pickup</div>';
- if(st==='partial')h+='<div class="stat" style="color:var(--wn)"><span class="dot" style="background:rgba(166,106,18,.15)">'+SVG.alert+'</span>Ready · '+nN+' not available — office notified</div>';
- if(st==='na'){
-  var vt=VTHR['o'+o.id]||[];
-  h+='<div class="stat" style="color:var(--rd)"><span class="dot" style="background:rgba(163,43,38,.13)">'+SVG.alert+'</span>Order not available — office notified'+
-   '<button class="oref" style="margin-left:auto" data-vth="o'+o.id+'"><u>Notes · '+vt.length+'</u>'+(S.vth['o'+o.id]?'▴':'▾')+'</button></div>';
-  if(S.vth['o'+o.id]){
-   h+='<div class="thr">'+vt.map(function(b){
-    return '<div class="bub'+(b.by==='me'?' me':'')+'"><span class="who">'+esc(b.who)+' · '+b.t+'</span>'+esc(b.txt)+'</div>'}).join('')+
-   '<div class="tin"><input id="vto'+o.id+'" data-vtid="o'+o.id+'" placeholder="Message the office…" value="'+esc(S.vtin['o'+o.id]||'')+'">'+
-   '<button data-vtsend="o'+o.id+'">Send</button></div>'+
-   '<div class="plock">'+SVG.lock+'Private — only '+esc(STORE)+' and the office.</div></div>';
-  }
- }
+ if(st==='ready')h+='<div class="stat" style="color:var(--ok)"><span class="dot anim" style="background:rgba(31,122,77,.14)">'+SVG.check+'</span>'+T('readyStat')+'</div>';
+ if(st==='partial')h+='<div class="stat" style="color:var(--wn)"><span class="dot" style="background:rgba(166,106,18,.15)">'+SVG.alert+'</span>'+T('partStat').replace('{n}',nN)+'</div>';
+ if(st==='na')h+='<div class="stat" style="color:var(--rd)"><span class="dot" style="background:rgba(163,43,38,.13)">'+SVG.alert+'</span>'+T('naStat')+'</div>';
  if(exp){
   h+=its.map(function(x){
    return '<div class="irow">'+(x.img?'<img class="th2" src="'+x.img+'" alt="">':'<span class="th2"></span>')+
@@ -589,16 +594,34 @@ function ocard(o){
    '<span class="avseg"><button class="avb y" data-iav="'+x.id+':y" aria-pressed="'+!!(x.av==='y'||(st&&st!=='na'&&x.av!=='n'))+'">'+T('avail')+'</button>'+
    '<button class="avb nn" data-iav="'+x.id+':n" aria-pressed="'+(x.av==='n')+'">'+T('navail')+'</button></span></div>'}).join('');
   if(st!=='na')h+='<div class="acts"><button class="btn b-ok" data-ordy="'+o.id+'">'+T('ready')+'</button>'+
-   '<button class="btn b-na" data-orna="'+o.id+'">'+T('notAvail')+'</button></div>';
+   '<button class="btn b-na" style="flex:1;padding:0" data-orna="'+o.id+'">'+(S.naArm===o.id?T('naArm'):T('notAvail'))+'</button></div>';
  }
  return h+'</div>'}
 
-function upCard(r){var im=pic(r[1],r[2]);
- return '<div class="c" style="box-shadow:none;opacity:.84"><div class="top">'+
- (im?'<img class="th" src="'+im+'" alt="">':'<div class="th"></div>')+'<div class="nb">'+
- '<div class="n1">'+esc(r[1])+'</div>'+(r[2]?'<div class="n2">'+esc(r[2])+'</div>':'')+
- '<div class="meta"><span class="oref" style="cursor:default">'+r[0]+'</span></div></div>'+
- '<div class="qb"><div class="qn" style="color:var(--t3)">'+r[3]+'</div><div class="qu">so far</div></div></div></div>'}
+/* upcoming order card — same shape as Today's, zero actions, provisional */
+function ucard(o){
+ var exp=S.uex[o.id],n=o.items.reduce(function(a,x){return a+x[2]},0);
+ var h='<div class="c" style="box-shadow:none"><button class="ohd" data-uex="'+o.id+'">'+
+  '<span class="onum">Order #'+o.id+'</span><span class="chip">'+esc(o.slot)+'</span>'+
+  '<span class="bdot w"><i></i>'+T('soFar')+'</span>'+
+  (!exp?'<span class="tstrip">'+o.items.slice(0,3).map(function(x){var im=pic(x[0],x[1]);
+    return im?'<img src="'+im+'" alt="">':''}).join('')+'</span>':'')+
+  '<span class="chev'+(exp?' open':'')+'">'+SVG.chev+'</span></button>'+
+  '<div style="font-size:11.5px;color:var(--t3);margin-top:4px">'+o.items.length+' item'+(o.items.length>1?'s':'')+' · '+n+' '+T('soFar')+' · '+esc(o.date)+'</div>';
+ if(exp){
+  h+=o.items.map(function(x){var im=pic(x[0],x[1]);
+   return '<div class="irow">'+(im?'<img class="th2" src="'+im+'" alt="">':'<span class="th2"></span>')+
+   '<div class="inm"><b>'+esc(x[0])+'</b>'+(x[1]?'<span>'+esc(x[1])+'</span>':'')+'</div>'+
+   '<span class="iq" style="color:var(--t3)">'+x[2]+'</span>'+
+   '<span style="font-size:10px;color:var(--t4);font-weight:650;min-width:44px">'+T('soFar')+'</span></div>'}).join('');
+ }
+ return h+'</div>'}
+function upSections(){
+ var tm=UPO.filter(function(o){return o.tomorrow}),lt=UPO.filter(function(o){return !o.tomorrow});
+ function sec(lb,arr){if(!arr.length)return '';
+  return '<div style="font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--t4);padding:4px 2px 2px">'+lb+'</div>'+
+  arr.map(ucard).join('')}
+ return sec(T('tomorrow')+' · '+(tm[0]?esc(tm[0].date):''),tm)+sec(T('upcoming'),lt)}
 
 function priceCardM(c){
  var p=S.prices[c.id];
@@ -663,8 +686,8 @@ function mobile(){
     :'<div class="acts" style="margin-top:0"><button class="btn b-ok" data-ack="y">Agree</button><button class="btn b-sh" style="flex:1" data-ack="n">Not what I gave</button></div>')+
    '</div><div class="mt" style="padding:26px 30px"><p>Customer prices never appear on this app.<br>Settlement is handled separately by the office.</p></div></div>';
  } else if(S.screen==='upcoming'){
-  h+='<div class="prov">'+SVG.alert+'Provisional · these numbers still grow</div>'+
-   '<div class="scroll"><div class="list">'+UP.map(upCard).join('')+'</div></div>';
+  h+='<div class="prov">'+SVG.alert+T('provUp')+'</div>'+
+   '<div class="scroll"><div class="list">'+upSections()+'</div></div>';
  } else if(S.screen==='products'){
   h+='<div class="prov">'+SVG.lock+T('provProd')+'</div>'+
    '<div class="scroll"><div class="list">'+S.items.map(function(c){
@@ -864,9 +887,9 @@ function wToday(){
  var naN=S.items.filter(function(x){return x.av==='n'}).length;
  var q=S.q.toLowerCase();
  function obadge(st,nN){
-  return st==='ready'?'<span class="bdot"><i></i>Ready for pickup</span>'
-   :st==='partial'?'<span class="bdot w"><i></i>Ready · '+nN+' not available</span>'
-   :st==='na'?'<span class="bdot r"><i></i>Order not available</span>'
+  return st==='ready'?'<span class="bdot"><i></i>'+T('readyStat')+'</span>'
+   :st==='partial'?'<span class="bdot w"><i></i>'+T('readyStat')+' · '+nN+' '+T('navail').toLowerCase()+'</span>'
+   :st==='na'?'<span class="bdot r"><i></i>'+T('notAvail')+'</span>'
    :'<span class="bdot n"><i></i>Packing</span>'}
  var mn='<div class="mn"><div class="hrow"><div><div class="h1">Today</div>'+
   '<div class="h2">'+STORE+' · Fri 1 Aug · '+oAct.length+' orders · pack by 10:15</div></div>'+
@@ -890,8 +913,8 @@ function wToday(){
    '<span class="bdot n"><i></i>'+esc(o.slot)+'</span>'+
    '<span style="font-size:12px;color:var(--t3)">'+o.items.length+' items · pack by '+o.packBy+'</span>'+
    '<div style="margin-left:auto;display:flex;align-items:center;gap:8px">'+obadge(st,nN)+
-   (st!=='na'?'<button class="wb" style="background:var(--ok);color:#fff" data-ordy="'+o.id+'">Ready for Pickup</button>'+
-    '<button class="wb" style="background:transparent;border:1.5px solid var(--rdl);color:var(--rd)" data-orna="'+o.id+'">Not Available</button>':'')+
+   (st!=='na'?'<button class="wb" style="background:var(--ok);color:#fff" data-ordy="'+o.id+'">'+T('ready')+'</button>'+
+    '<button class="wb" style="background:transparent;border:1.5px solid var(--rdl);color:var(--rd)" data-orna="'+o.id+'">'+(S.naArm===o.id?T('naArm'):T('notAvail'))+'</button>':'')+
    '</div></div>'+
    its.map(function(x){
     return '<div class="rw">'+thumb(x,'')+
@@ -912,16 +935,24 @@ function wToday(){
  return mn+rr}
 
 function wUpcoming(){
- var days={};UP.forEach(function(r){(days[r[0]]=days[r[0]]||[]).push(r)});
- return '<div class="mn"><div class="hrow"><div><div class="h1">Upcoming</div>'+
-  '<div class="h2">'+STORE+' · next 3 days</div></div><span class="bdot w"><i></i>Provisional — numbers still grow</span></div>'+
-  Object.keys(days).map(function(d){
-   return '<div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t4);margin:14px 2px 7px">'+d+'</div>'+
-   '<div class="tbl">'+days[d].map(function(r){var im=pic(r[1],r[2]);
+ var tm=UPO.filter(function(o){return o.tomorrow}),lt=UPO.filter(function(o){return !o.tomorrow});
+ function grp(lb,arr){if(!arr.length)return '';
+  return '<div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t4);margin:14px 2px 7px">'+lb+'</div>'+
+  arr.map(function(o){
+   return '<div class="tbl" style="margin-bottom:12px;opacity:.92"><div class="rw" style="background:var(--pg)">'+
+   '<span style="font-size:15px;font-weight:700">Order #'+o.id+'</span>'+
+   '<span class="bdot n"><i></i>'+esc(o.slot)+'</span>'+
+   '<span style="font-size:12px;color:var(--t3)">'+esc(o.date)+' · '+o.items.length+' item'+(o.items.length>1?'s':'')+'</span>'+
+   '<span class="bdot w" style="margin-left:auto"><i></i>'+T('soFar')+'</span></div>'+
+   o.items.map(function(x){var im=pic(x[0],x[1]);
     return '<div class="rw">'+(im?'<img src="'+im+'" alt="">':'<div style="width:38px"></div>')+
-    '<div style="flex:1"><div style="font-size:14px;font-weight:600;color:var(--t2)">'+esc(r[1])+
-    (r[2]?' <span style="color:var(--t3);font-weight:400">'+esc(r[2])+'</span>':'')+'</div></div>'+
-    '<div class="q" style="color:var(--t3)">'+r[3]+'</div><div class="qu2">so far</div></div>'}).join('')+'</div>'}).join('')+
+    '<div style="flex:1"><div style="font-size:14px;font-weight:600;color:var(--t2)">'+esc(x[0])+
+    (x[1]?' <span style="color:var(--t3);font-weight:400">'+esc(x[1])+'</span>':'')+'</div></div>'+
+    '<div class="q" style="color:var(--t3)">'+x[2]+'</div><div class="qu2">'+T('soFar')+'</div></div>'}).join('')+
+   '</div>'}).join('')}
+ return '<div class="mn"><div class="hrow"><div><div class="h1">'+T('upcoming')+'</div>'+
+  '<div class="h2">'+STORE+'</div></div><span class="bdot w"><i></i>'+T('provUp')+'</span></div>'+
+  grp(T('tomorrow')+(tm[0]?' · '+esc(tm[0].date):''),tm)+grp(T('upcoming'),lt)+
   '</div>'}
 
 function wPrint(){
@@ -1124,12 +1155,11 @@ document.addEventListener('click',function(e){
   ORDERS.forEach(function(o){if(o.items.indexOf(ix)>-1)ordRecalc(o)})}
  else if(d.ordy){var od=null;ORDERS.forEach(function(o){if(o.id===d.ordy)od=o});
   if(od){ordItems(od).forEach(function(x){if(x.av!=='n')x.av='y'});
-   S.ost[od.id]=ordItems(od).some(function(x){return x.av==='n'})?'partial':'ready'}}
- else if(d.orna){S.ost[d.orna]='na';
-  if(!VTHR['o'+d.orna]){VTHR['o'+d.orna]=[
-   {by:'me',who:'You · '+STORE,t:'09:57',txt:'Order #'+d.orna+' not available today — sent to office.'},
-   {by:'of',who:'Office',t:'09:59',txt:'Noted — we will inform the customer and adjust. Terima kasih.'}];
-   S.vth['o'+d.orna]=true}}
+   S.ost[od.id]=ordItems(od).some(function(x){return x.av==='n'})?'partial':'ready';S.naArm=null}}
+ else if(d.orna){
+  if(S.naArm===d.orna){S.ost[d.orna]='na';S.naArm=null}
+  else{S.naArm=d.orna}}
+ else if(d.uex){S.uex[d.uex]=!S.uex[d.uex]}
  else if(d.rx!==undefined){S.rx[d.rx]=!S.rx[d.rx]}
  else if(d.s2){S.screen=d.s2;S.nav=navFor(d.s2)}
  else if(t.id==='thBtn'){S.dark=!S.dark;document.documentElement.setAttribute('data-theme',S.dark?'dark':'light')}
